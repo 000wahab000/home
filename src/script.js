@@ -126,11 +126,6 @@ function initServersDialog() {
         }
     });
 
-    const workingsBtn = dialog.querySelector('#workings-btn');
-    workingsBtn.addEventListener('click', function () {
-        window.open('https://github.com/000wahab000', '_blank', 'noopener');
-    });
-
     refreshBtn.addEventListener('click', function () {
         refreshBtn.disabled = true;
 
