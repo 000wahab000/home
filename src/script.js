@@ -294,7 +294,6 @@ document.addEventListener('DOMContentLoaded', function () {
         currentScale = INITIAL_SCALE;
         panX = 0;
         panY = 0;
-        captureMenuAnchors();
         document.body.classList.add('zoomed-out');
         var dur = '1.5s cubic-bezier(0.16, 1, 0.3, 1)';
         viewport.style.transition = 'transform ' + dur;
@@ -439,53 +438,79 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ─── NODE GRAPH ──────────────────────────────────────────────────────────
 
-    var menuAnchors = {};   // world-space right-edge of each menu item
     var nodePositions = {}; // world-space top-left of each node
-
-    function captureMenuAnchors() {
-        // Map each menu section to which edge of the viewport it exits from
-        var edgeMap = {
-            'new-game':    'left',
-            'options':     'right',
-            'quit':        'left',
-            'find-servers':'bottom'
-        };
-        var vw = window.innerWidth, vh = window.innerHeight;
-        document.querySelectorAll('.menu-item').forEach(function (item) {
-            var s = item.getAttribute('data-section');
-            var dir = edgeMap[s];
-            if (!dir) return;
-            var r = item.getBoundingClientRect();
-            var midY = r.top + r.height / 2;
-            if (dir === 'left')   menuAnchors[s] = { x: 0,           y: midY,  dir: 'left' };
-            if (dir === 'right')  menuAnchors[s] = { x: vw,          y: midY,  dir: 'right' };
-            if (dir === 'bottom') menuAnchors[s] = { x: vw * 0.18,   y: vh,    dir: 'bottom' };
-        });
-    }
 
     function drawWires() {
         if (!wiresSVG) return;
         wiresSVG.innerHTML = '';
+        var vw = window.innerWidth;
+        var vh = window.innerHeight;
+
+        // Viewport ports (centers of the edges)
+        var vPorts = [
+            { x: vw / 2, y: 0, dir: 'top' },
+            { x: vw / 2, y: vh, dir: 'bottom' },
+            { x: 0, y: vh / 2, dir: 'left' },
+            { x: vw, y: vh / 2, dir: 'right' }
+        ];
+
         nodesLayer.querySelectorAll('.node').forEach(function (node) {
             var pos = nodePositions[node.id];
             if (!pos || parseFloat(node.style.opacity) < 0.05) return;
-            var anchor = menuAnchors[node.getAttribute('data-menu')];
-            if (!anchor) return;
 
-            var sx = anchor.x, sy = anchor.y;
-            var ex = pos.x,    ey = pos.y;
-            var d, t;
+            var w = node.offsetWidth || 200;
+            var h = node.offsetHeight || 150;
+            var ex = pos.x;
+            var ey = pos.y;
 
-            if (anchor.dir === 'bottom') {
-                t  = Math.max(80, Math.abs(ey - sy) * 0.5);
-                d  = 'M'+sx+' '+sy+' C'+sx+' '+(sy+t)+' '+ex+' '+(ey-t)+' '+ex+' '+ey;
-            } else if (anchor.dir === 'left') {
-                t  = Math.max(80, Math.abs(ex - sx) * 0.5);
-                d  = 'M'+sx+' '+sy+' C'+(sx-t)+' '+sy+' '+(ex+t)+' '+ey+' '+ex+' '+ey;
-            } else {
-                t  = Math.max(80, Math.abs(ex - sx) * 0.5);
-                d  = 'M'+sx+' '+sy+' C'+(sx+t)+' '+sy+' '+(ex-t)+' '+ey+' '+ex+' '+ey;
-            }
+            // Node ports (centers of the edges)
+            var nPorts = [
+                { x: ex + w / 2, y: ey, dir: 'top' },
+                { x: ex + w / 2, y: ey + h, dir: 'bottom' },
+                { x: ex, y: ey + h / 2, dir: 'left' },
+                { x: ex + w, y: ey + h / 2, dir: 'right' }
+            ];
+
+            // Find closest pair of (viewport port, node port)
+            var minDist = Infinity;
+            var bestV = null;
+            var bestN = null;
+
+            vPorts.forEach(function (vp) {
+                nPorts.forEach(function (np) {
+                    var dx = vp.x - np.x;
+                    var dy = vp.y - np.y;
+                    var dist = dx * dx + dy * dy;
+                    if (dist < minDist) {
+                        minDist = dist;
+                        bestV = vp;
+                        bestN = np;
+                    }
+                });
+            });
+
+            if (!bestV || !bestN) return;
+
+            var sx = bestV.x, sy = bestV.y;
+            var tx = bestN.x, ty = bestN.y;
+
+            // Determine tangents based on directions
+            var dist = Math.sqrt(minDist);
+            var t = Math.max(50, dist * 0.4);
+
+            var cp1x = sx, cp1y = sy;
+            if (bestV.dir === 'left') cp1x -= t;
+            if (bestV.dir === 'right') cp1x += t;
+            if (bestV.dir === 'top') cp1y -= t;
+            if (bestV.dir === 'bottom') cp1y += t;
+
+            var cp2x = tx, cp2y = ty;
+            if (bestN.dir === 'left') cp2x -= t;
+            if (bestN.dir === 'right') cp2x += t;
+            if (bestN.dir === 'top') cp2y -= t;
+            if (bestN.dir === 'bottom') cp2y += t;
+
+            var d = 'M' + sx + ' ' + sy + ' C' + cp1x + ' ' + cp1y + ' ' + cp2x + ' ' + cp2y + ' ' + tx + ' ' + ty;
 
             var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             path.setAttribute('d', d);
@@ -502,7 +527,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Port dot on the node
             var c2 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            c2.setAttribute('cx', ex); c2.setAttribute('cy', ey); c2.setAttribute('r', '4');
+            c2.setAttribute('cx', tx); c2.setAttribute('cy', ty); c2.setAttribute('r', '4');
             c2.setAttribute('fill', 'rgba(196,181,80,0.7)');
             wiresSVG.appendChild(c2);
         });
