@@ -223,6 +223,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 case 'quit':
                     if (quitDialog) quitDialog.showModal();
                     break;
+                case 'workings':
+                    window.open('https://github.com/000wahab000', '_blank', 'noopener');
+                    break;
                 default:
                     break;
             }
