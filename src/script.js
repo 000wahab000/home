@@ -235,6 +235,162 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    // ─── PAN / ZOOM SYSTEM ───────────────────────────────────────────────────
+
+    var viewport = document.getElementById('app-viewport');
+    var gridCanvas = document.getElementById('grid-canvas');
+
+    var GRID_CELL_SIZE = 40; // must match the 40px in CSS
+
+    // How zoomed-out the screen starts when entering workings mode.
+    // 0.58 means the portfolio appears at 58% of its normal size.
+    var INITIAL_SCALE = 0.58;
+
+    var isWorkingsMode = false; // are we in pan/zoom mode?
+    var currentScale = 1;      // current zoom level (1 = full size)
+    var panX = 0;              // how many pixels the screen has been moved left/right
+    var panY = 0;              // how many pixels the screen has been moved up/down
+
+    var isDragging = false;
+    var lastMouseX = 0;
+    var lastMouseY = 0;
+
+    // Writes the current pan + scale to the viewport AND grid.
+    function applyTransform() {
+        viewport.style.transform = 'translate(' + panX + 'px, ' + panY + 'px) scale(' + currentScale + ')';
+        // Shift the grid so it feels glued to the floating portfolio.
+        // background-position pans the grid lines, background-size scales the cell size.
+        var cellSize = GRID_CELL_SIZE * currentScale;
+        gridCanvas.style.backgroundSize = cellSize + 'px ' + cellSize + 'px';
+        gridCanvas.style.backgroundPosition = panX + 'px ' + panY + 'px';
+    }
+
+    // Smoothly animate viewport AND grid to a target state, then run a callback.
+    function animateTo(targetScale, targetX, targetY, onDone) {
+        var dur = '0.6s cubic-bezier(0.16, 1, 0.3, 1)';
+        viewport.style.transition = 'transform ' + dur;
+        viewport.style.transform = 'translate(' + targetX + 'px, ' + targetY + 'px) scale(' + targetScale + ')';
+        // Animate grid in sync
+        gridCanvas.style.transition = 'background-size ' + dur + ', background-position ' + dur;
+        var targetCellSize = GRID_CELL_SIZE * targetScale;
+        gridCanvas.style.backgroundSize = targetCellSize + 'px ' + targetCellSize + 'px';
+        gridCanvas.style.backgroundPosition = targetX + 'px ' + targetY + 'px';
+        viewport.addEventListener('transitionend', function handler() {
+            viewport.removeEventListener('transitionend', handler);
+            viewport.style.transition = '';
+            gridCanvas.style.transition = '';
+            if (onDone) onDone();
+        });
+    }
+
+    function enterWorkingsMode() {
+        isWorkingsMode = true;
+        currentScale = INITIAL_SCALE;
+        panX = 0;
+        panY = 0;
+        document.body.classList.add('zoomed-out');
+        // Animate both viewport and grid for the zoom-out entry
+        var dur = '1.5s cubic-bezier(0.16, 1, 0.3, 1)';
+        viewport.style.transition = 'transform ' + dur;
+        gridCanvas.style.transition = 'background-size ' + dur + ', background-position ' + dur;
+        applyTransform();
+        viewport.addEventListener('transitionend', function handler() {
+            viewport.removeEventListener('transitionend', handler);
+            viewport.style.transition = '';
+            gridCanvas.style.transition = '';
+        });
+    }
+
+    function exitWorkingsMode() {
+        isWorkingsMode = false;
+        isDragging = false;
+        document.body.classList.remove('zoomed-out');
+        document.body.classList.remove('is-dragging');
+        animateTo(1, 0, 0, function () {
+            viewport.style.transform = '';
+            currentScale = 1;
+            panX = 0;
+            panY = 0;
+            // Reset grid back to its default CSS state
+            gridCanvas.style.backgroundSize = GRID_CELL_SIZE + 'px ' + GRID_CELL_SIZE + 'px';
+            gridCanvas.style.backgroundPosition = '0 0';
+        });
+    }
+
+    // ── Scroll wheel zoom ────────────────────────────────────────────────────
+    // Zoom toward wherever the mouse cursor is sitting.
+    viewport.addEventListener('wheel', function (e) {
+        if (!isWorkingsMode) return;
+        e.preventDefault();
+
+        // Zoom out on scroll-down, zoom in on scroll-up
+        var factor = e.deltaY > 0 ? 0.92 : 1.08;
+        var newScale = currentScale * factor;
+
+        // Cap: can never zoom in past the initial zoomed-out scale
+        if (newScale > INITIAL_SCALE) newScale = INITIAL_SCALE;
+
+        // Zoom toward the cursor position.
+        // mouseX/Y are measured from the screen center (where the viewport is anchored).
+        var mouseX = e.clientX - window.innerWidth / 2;
+        var mouseY = e.clientY - window.innerHeight / 2;
+
+        // Find which point in the viewport content is currently under the cursor
+        var contentX = (mouseX - panX) / currentScale;
+        var contentY = (mouseY - panY) / currentScale;
+
+        // After the scale changes, shift pan so that same content point stays under cursor
+        panX = mouseX - contentX * newScale;
+        panY = mouseY - contentY * newScale;
+        currentScale = newScale;
+
+        viewport.style.transition = 'none'; // immediate — no lag on scroll
+        applyTransform();
+    }, { passive: false });
+
+    // ── Drag to pan (left-click or middle-click hold) ────────────────────────
+    document.addEventListener('mousedown', function (e) {
+        if (!isWorkingsMode) return;
+        var isLeftClick = e.button === 0;
+        var isMiddleClick = e.button === 1;
+        if (!isLeftClick && !isMiddleClick) return;
+
+        // Don't start a drag if the user clicked on a dialog or the backdrop
+        if (e.target.closest('.cs-dialog') || e.target === backdrop) return;
+
+        if (isMiddleClick) e.preventDefault(); // stops the browser scroll cursor appearing
+
+        isDragging = true;
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+        document.body.classList.add('is-dragging');
+        viewport.style.transition = 'none'; // instant response during drag
+    });
+
+    document.addEventListener('mousemove', function (e) {
+        if (!isDragging) return;
+        panX += e.clientX - lastMouseX;
+        panY += e.clientY - lastMouseY;
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+        applyTransform();
+    });
+
+    document.addEventListener('mouseup', function () {
+        if (!isDragging) return;
+        isDragging = false;
+        document.body.classList.remove('is-dragging');
+    });
+
+    // ── Double-click on viewport to exit workings mode ───────────────────────
+    viewport.addEventListener('dblclick', function (e) {
+        if (!isWorkingsMode) return;
+        // Don't exit if the user double-clicked a server item or dialog
+        if (e.target.closest('.cs-dialog') || e.target.closest('.server-item')) return;
+        exitWorkingsMode();
+    });
+
+    // ─── MENU ITEMS ──────────────────────────────────────────────────────────
     const menuItems = document.querySelectorAll('.menu-item');
     menuItems.forEach(item => {
         item.addEventListener('click', function (e) {
@@ -259,7 +415,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (quitDialog) openDialog(quitDialog);
                     break;
                 case 'workings':
-                    document.body.classList.toggle('zoomed-out');
+                    if (isWorkingsMode) {
+                        exitWorkingsMode();
+                    } else {
+                        enterWorkingsMode();
+                    }
                     break;
                 default:
                     break;
