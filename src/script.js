@@ -170,13 +170,48 @@ document.addEventListener('DOMContentLoaded', function () {
         introOverlay.style.display = 'none';
     }, { once: true });
 
-    setTimeout(() => {
-        introOverlay.classList.add('hidden');
-        newGame.showModal();
-    }, 5100);
-
     const menuClickSound = new Audio('sounds/menu_click.wav');
     const menuCloseSound = new Audio('sounds/window_close.wav');
+
+    const backdrop = document.getElementById('dialog-backdrop');
+
+    function openDialog(dialog) {
+        if (!dialog) return;
+        [newGame, optionsDialog, quitDialog, serversDialog].forEach(d => {
+            if (d && d !== dialog && d.open) {
+                d.close();
+            }
+        });
+        dialog.show();
+        if (backdrop) backdrop.classList.remove('hidden');
+    }
+
+    [newGame, optionsDialog, quitDialog, serversDialog].forEach(dialog => {
+        if (dialog) {
+            dialog.addEventListener('close', () => {
+                const anyOpen = [newGame, optionsDialog, quitDialog, serversDialog].some(d => d && d.open);
+                if (!anyOpen && backdrop) {
+                    backdrop.classList.add('hidden');
+                }
+            });
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const openD = [newGame, optionsDialog, quitDialog, serversDialog].find(d => d && d.open);
+            if (openD) {
+                openD.close();
+                menuCloseSound.currentTime = 0;
+                menuCloseSound.play();
+            }
+        }
+    });
+
+    setTimeout(() => {
+        introOverlay.classList.add('hidden');
+        openDialog(newGame);
+    }, 5100);
 
     document.querySelectorAll('.cs-dialog .close').forEach(closeBtn => {
         closeBtn.addEventListener('click', () => {
@@ -195,7 +230,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             if (serversDialog) {
-                serversDialog.showModal();
+                openDialog(serversDialog);
             }
         });
     });
@@ -212,19 +247,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
             switch (sectionId) {
                 case 'new-game':
-                    if (newGame) newGame.showModal();
+                    if (newGame) openDialog(newGame);
                     break;
                 case 'options':
-                    if (optionsDialog) optionsDialog.showModal();
+                    if (optionsDialog) openDialog(optionsDialog);
                     break;
                 case 'find-servers':
-                    if (serversDialog) serversDialog.showModal();
+                    if (serversDialog) openDialog(serversDialog);
                     break;
                 case 'quit':
-                    if (quitDialog) quitDialog.showModal();
+                    if (quitDialog) openDialog(quitDialog);
                     break;
                 case 'workings':
-                    window.open('https://github.com/000wahab000', '_blank', 'noopener');
+                    document.body.classList.toggle('zoomed-out');
                     break;
                 default:
                     break;

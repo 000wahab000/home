@@ -27,13 +27,17 @@
         </video>
     </div>
 
-    <div class="container">
-        <div class="menu">
-            <a class="menu-item" data-section="new-game">New game</a>
-            <a class="menu-item" data-section="find-servers">Find servers</a>
-            <a class="menu-item" data-section="options">Options</a>
-            <a class="menu-item" data-section="quit">Quit</a>
-            <a class="menu-item" data-section="workings">Check the workings</a>
+    <div id="dialog-backdrop" class="hidden"></div>
+
+    <div id="app-viewport">
+        <div class="container">
+            <div class="menu">
+                <a class="menu-item" data-section="new-game">New game</a>
+                <a class="menu-item" data-section="find-servers">Find servers</a>
+                <a class="menu-item" data-section="options">Options</a>
+                <a class="menu-item" data-section="quit">Quit</a>
+                <a class="menu-item" data-section="workings">See The Workings</a>
+            </div>
         </div>
     </div>
 
@@ -59,13 +63,16 @@
                         </div>
                         <hr class="cs-hr" />
                         <p class="text description">
-                            Hi, I'm Wahab — a CS student from VESIT, Mumbai building things at the intersection of AI
+                            Hi, I'm Wahab — a CS student from VESIT, Mumbai building things at the intersection of
+                            AI
                             and the web.<br /><br />
-                            I built an AI campus chatbot that won "Most Innovative Idea" at UniMerge 1.0, a real-time
+                            I built an AI campus chatbot that won "Most Innovative Idea" at UniMerge 1.0, a
+                            real-time
                             bot detection system for IRCTC Tatkal at a hackathon, and I contribute to open source
                             projects like Lucide Icons.<br />
                             <br />
-                            I mostly work with Python and JavaScript, and whatever API makes the idea possible.<br />
+                            I mostly work with Python and JavaScript, and whatever API makes the idea
+                            possible.<br />
                             <br />
                             You can find my basic info and contacts in the 'Options' window and my projects in 'Find
                             servers'.
@@ -220,16 +227,21 @@
                                 <div class="server-item" data-url="https://github.com/000wahab000">
                                     <div class="project-name-column server-item-column">AskVES</div>
                                     <div class="project-description-column server-item-column">AI chatbot for VESIT
-                                        students — answers campus queries via Gemini API. Won Most Innovative Idea at
+                                        students — answers campus queries via Gemini API. Won Most Innovative Idea
+                                        at
                                         UniMerge 1.0</div>
-                                    <div class="project-stack-column server-item-column">Python, Flask, Gemini API</div>
+                                    <div class="project-stack-column server-item-column">Python, Flask, Gemini API
+                                    </div>
                                     <div class="project-status-column server-item-column">Live</div>
                                 </div>
                                 <div class="server-item" data-url="https://github.com/000wahab000">
                                     <div class="project-name-column server-item-column">Smart Tatkal</div>
-                                    <div class="project-description-column server-item-column">Honeypot-based real-time
-                                        bot detection system for IRCTC Tatkal — built at FAR AWAY 2026 hackathon</div>
-                                    <div class="project-stack-column server-item-column">FastAPI, React, Python</div>
+                                    <div class="project-description-column server-item-column">Honeypot-based
+                                        real-time
+                                        bot detection system for IRCTC Tatkal — built at FAR AWAY 2026 hackathon
+                                    </div>
+                                    <div class="project-stack-column server-item-column">FastAPI, React, Python
+                                    </div>
                                     <div class="project-status-column server-item-column">Live</div>
                                 </div>
                                 <div class="server-item" data-url="https://github.com/000wahab000/studysync-backend">
@@ -242,37 +254,43 @@
                                 <div class="server-item" data-url="https://github.com/000wahab000/autopilot-planner">
                                     <div class="project-name-column server-item-column">Autopilot Planner</div>
                                     <div class="project-description-column server-item-column">Intelligent
-                                        study-planning app that auto-generates schedules based on tasks and deadlines
+                                        study-planning app that auto-generates schedules based on tasks and
+                                        deadlines
                                     </div>
-                                    <div class="project-stack-column server-item-column">Python, Flask, Gemini API</div>
+                                    <div class="project-stack-column server-item-column">Python, Flask, Gemini API
+                                    </div>
                                     <div class="project-status-column server-item-column">Live</div>
                                 </div>
                                 <div class="server-item" data-url="https://github.com/000wahab000">
                                     <div class="project-name-column server-item-column">GPT-2 Fine-Tune</div>
                                     <div class="project-description-column server-item-column">Fine-tuned GPT-2 on
                                         custom data — dataset prep, training, hyperparameter tuning, and eval</div>
-                                    <div class="project-stack-column server-item-column">Python, PyTorch, HuggingFace
+                                    <div class="project-stack-column server-item-column">Python, PyTorch,
+                                        HuggingFace
                                     </div>
                                     <div class="project-status-column server-item-column">Complete</div>
                                 </div>
                                 <div class="server-item"
                                     data-url="https://github.com/000wahab000/Python-Passion-Project">
                                     <div class="project-name-column server-item-column">Hand Tracking</div>
-                                    <div class="project-description-column server-item-column">Real-time hand landmark
+                                    <div class="project-description-column server-item-column">Real-time hand
+                                        landmark
                                         detection from webcam feed for gesture-based interaction</div>
                                     <div class="project-stack-column server-item-column">Python, OpenCV</div>
                                     <div class="project-status-column server-item-column">Complete</div>
                                 </div>
                                 <div class="server-item" data-url="https://github.com/000wahab000">
                                     <div class="project-name-column server-item-column">Java Paint</div>
-                                    <div class="project-description-column server-item-column">Desktop paint app with
+                                    <div class="project-description-column server-item-column">Desktop paint app
+                                        with
                                         free draw, shapes, and erase — academic OOP + GUI project</div>
                                     <div class="project-stack-column server-item-column">Java, Swing</div>
                                     <div class="project-status-column server-item-column">Complete</div>
                                 </div>
                                 <div class="server-item" data-url="https://github.com/000wahab000">
                                     <div class="project-name-column server-item-column">StackRx</div>
-                                    <div class="project-description-column server-item-column">GitHub repo analyzer that
+                                    <div class="project-description-column server-item-column">GitHub repo analyzer
+                                        that
                                         prescribes a tech stack based on codebase patterns</div>
                                     <div class="project-stack-column server-item-column">React</div>
                                     <div class="project-status-column server-item-column">WIP</div>

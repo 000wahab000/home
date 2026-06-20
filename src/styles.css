@@ -26,15 +26,68 @@
 body {
     margin: 0;
     padding: 0;
+    background-color: #0b0c0e;
+    background-image:
+        radial-gradient(circle at center, rgba(74, 89, 66, 0.12) 0%, rgba(11, 12, 14, 0.98) 100%),
+        linear-gradient(rgba(255, 255, 255, 0.01) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.01) 1px, transparent 1px);
+    background-size: 100% 100%, 32px 32px, 32px 32px;
+    background-position: center;
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    overflow: hidden;
+    font-size: 115%;
+    perspective: 1200px;
+}
+
+#app-viewport {
+    width: 100vw;
+    height: 100vh;
     background-image: url('images/background.png');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    height: 100vh;
     display: flex;
     color: white;
     overflow: hidden;
-    font-size: 115%;
+    position: relative;
+    box-sizing: border-box;
+    transform-style: preserve-3d;
+    transform-origin: center center;
+    transition: transform 1.5s cubic-bezier(0.16, 1, 0.3, 1),
+        box-shadow 1.5s cubic-bezier(0.16, 1, 0.3, 1),
+        border-radius 1.5s cubic-bezier(0.16, 1, 0.3, 1),
+        border 1.5s cubic-bezier(0.16, 1, 0.3, 1);
+    border: 1px solid transparent;
+    border-radius: 0px;
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+}
+
+body.zoomed-out #app-viewport {
+    transform: translateZ(-350px) rotateX(3deg);
+    border: 1px solid rgba(196, 181, 80, 0.35);
+    border-radius: 12px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 30px rgba(196, 181, 80, 0.15);
+}
+
+#dialog-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.45);
+    z-index: 99;
+    transition: opacity 0.3s ease;
+    pointer-events: auto;
+}
+
+#dialog-backdrop.hidden {
+    display: none;
 }
 
 .container {
@@ -149,8 +202,18 @@ body {
 
 .cs-dialog {
     font-size: 23px;
-    transform: scale(1.15);
-    transform-origin: center;
+    transform: translate(-50%, -50%) scale(1.15) !important;
+    transform-origin: center !important;
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    margin: 0 !important;
+    z-index: 9999 !important;
+    transition: transform 1.5s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+body.zoomed-out .cs-dialog {
+    transform: translate(-50%, -50%) translateZ(-350px) rotateX(3deg) scale(1.15) !important;
 }
 
 .cs-dialog .heading .text {
@@ -393,7 +456,8 @@ body {
         margin: 10px 0;
     }
 
-    .player-name-section, .city-section {
+    .player-name-section,
+    .city-section {
         width: 200px;
     }
 
@@ -409,7 +473,7 @@ body {
     .cs-dialog.options-dialog {
         max-width: 600px;
     }
-    
+
     .cs-dialog.servers-dialog {
         width: 90%;
     }
@@ -431,7 +495,7 @@ body {
     .cs-dialog.options-dialog {
         width: 360px;
     }
-    
+
     .cs-dialog.servers-dialog {
         width: 95%;
     }
