@@ -76,9 +76,9 @@ body {
 }
 
 body.zoomed-out #app-viewport {
-    border: 1px solid rgba(196, 181, 80, 0.35);
-    border-radius: 12px;
-    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 30px rgba(196, 181, 80, 0.15);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 6px;
+    box-shadow: 0 6px 28px rgba(0,0,0,0.7);
     cursor: grab;
 }
 
@@ -548,3 +548,105 @@ body.zoomed-out.is-dragging #app-viewport {
         width: 300px;
     }
 }
+
+/* ── Node graph layer ───────────────────────────────────────────────────── */
+
+#nodes-layer {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    transform-origin: center center;
+    z-index: 2;
+}
+
+#wires-svg {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+}
+
+.node {
+    position: absolute;
+    pointer-events: auto;
+    background: #1a1c22;
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #b8b8c8;
+    opacity: 0;
+    user-select: none;
+    box-shadow: 0 6px 28px rgba(0,0,0,0.7);
+    overflow: hidden;
+}
+
+.node-bar {
+    background: #111318;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    padding: 5px 8px;
+    font-size: 10px;
+    color: #8888a0;
+    cursor: move;
+    letter-spacing: 0.5px;
+}
+
+.node-body {
+    padding: 0;
+    overflow: hidden;
+    display: block;
+}
+
+/* Scale wrapper — holds the cloned dialog at reduced size */
+.node-scale-wrap {
+    display: block;
+    overflow: visible;
+    transform-origin: top left;
+}
+
+/* Neutralise the cs-dialog fixed positioning when cloned inside a node */
+.node-clone.cs-dialog {
+    position: static !important;
+    top: auto !important;
+    left: auto !important;
+    transform: none !important;
+    display: block !important;
+    margin: 0 !important;
+    z-index: auto !important;
+    width: 100% !important;
+    max-width: none !important;
+    transition: none !important;
+    box-shadow: none !important;
+}
+
+.node-field {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.nk { color: rgba(255,255,255,0.35); }
+.nv { color: #c0bfa0; }
+
+.nk-divider {
+    border-top: 1px solid rgba(196, 181, 80, 0.15);
+    margin: 2px 0;
+}
+
+.nk-bio {
+    color: rgba(192,191,160,0.65);
+    font-size: 10px;
+    line-height: 1.5;
+}
+
+.node-project {
+    display: flex;
+    justify-content: space-between;
+    padding: 2px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 10px;
+}
+
+.np-live { color: #7ecb6e; }
+.np-done { color: rgba(255,255,255,0.4); }
+.np-wip  { color: rgba(196,181,80,0.75); }

@@ -239,8 +239,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var viewport = document.getElementById('app-viewport');
     var gridCanvas = document.getElementById('grid-canvas');
+    var nodesLayer = document.getElementById('nodes-layer');
+    var wiresSVG = document.getElementById('wires-svg');
 
-    var GRID_CELL_SIZE = 40; // must match the 40px in CSS
+    var GRID_CELL_SIZE = 40;
 
     // How zoomed-out the screen starts when entering workings mode.
     // 0.58 means the portfolio appears at 58% of its normal size.
@@ -257,20 +259,23 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Writes the current pan + scale to the viewport AND grid.
     function applyTransform() {
-        viewport.style.transform = 'translate(' + panX + 'px, ' + panY + 'px) scale(' + currentScale + ')';
-        // Shift the grid so it feels glued to the floating portfolio.
-        // background-position pans the grid lines, background-size scales the cell size.
+        var t = 'translate(' + panX + 'px, ' + panY + 'px) scale(' + currentScale + ')';
+        viewport.style.transform = t;
+        nodesLayer.style.transform = t;
         var cellSize = GRID_CELL_SIZE * currentScale;
         gridCanvas.style.backgroundSize = cellSize + 'px ' + cellSize + 'px';
         gridCanvas.style.backgroundPosition = panX + 'px ' + panY + 'px';
+        drawWires();
     }
 
     // Smoothly animate viewport AND grid to a target state, then run a callback.
     function animateTo(targetScale, targetX, targetY, onDone) {
         var dur = '0.6s cubic-bezier(0.16, 1, 0.3, 1)';
+        var t = 'translate(' + targetX + 'px, ' + targetY + 'px) scale(' + targetScale + ')';
         viewport.style.transition = 'transform ' + dur;
-        viewport.style.transform = 'translate(' + targetX + 'px, ' + targetY + 'px) scale(' + targetScale + ')';
-        // Animate grid in sync
+        nodesLayer.style.transition = 'transform ' + dur;
+        viewport.style.transform = t;
+        nodesLayer.style.transform = t;
         gridCanvas.style.transition = 'background-size ' + dur + ', background-position ' + dur;
         var targetCellSize = GRID_CELL_SIZE * targetScale;
         gridCanvas.style.backgroundSize = targetCellSize + 'px ' + targetCellSize + 'px';
@@ -278,6 +283,7 @@ document.addEventListener('DOMContentLoaded', function () {
         viewport.addEventListener('transitionend', function handler() {
             viewport.removeEventListener('transitionend', handler);
             viewport.style.transition = '';
+            nodesLayer.style.transition = '';
             gridCanvas.style.transition = '';
             if (onDone) onDone();
         });
@@ -288,30 +294,34 @@ document.addEventListener('DOMContentLoaded', function () {
         currentScale = INITIAL_SCALE;
         panX = 0;
         panY = 0;
+        captureMenuAnchors();
         document.body.classList.add('zoomed-out');
-        // Animate both viewport and grid for the zoom-out entry
         var dur = '1.5s cubic-bezier(0.16, 1, 0.3, 1)';
         viewport.style.transition = 'transform ' + dur;
+        nodesLayer.style.transition = 'transform ' + dur;
         gridCanvas.style.transition = 'background-size ' + dur + ', background-position ' + dur;
         applyTransform();
         viewport.addEventListener('transitionend', function handler() {
             viewport.removeEventListener('transitionend', handler);
             viewport.style.transition = '';
+            nodesLayer.style.transition = '';
             gridCanvas.style.transition = '';
+            flyOutNodes();
         });
     }
 
     function exitWorkingsMode() {
         isWorkingsMode = false;
         isDragging = false;
+        hideNodes();
         document.body.classList.remove('zoomed-out');
         document.body.classList.remove('is-dragging');
         animateTo(1, 0, 0, function () {
             viewport.style.transform = '';
+            nodesLayer.style.transform = '';
             currentScale = 1;
             panX = 0;
             panY = 0;
-            // Reset grid back to its default CSS state
             gridCanvas.style.backgroundSize = GRID_CELL_SIZE + 'px ' + GRID_CELL_SIZE + 'px';
             gridCanvas.style.backgroundPosition = '0 0';
         });
@@ -425,5 +435,192 @@ document.addEventListener('DOMContentLoaded', function () {
                     break;
             }
         });
+    });
+
+    // ─── NODE GRAPH ──────────────────────────────────────────────────────────
+
+    var menuAnchors = {};   // world-space right-edge of each menu item
+    var nodePositions = {}; // world-space top-left of each node
+
+    function captureMenuAnchors() {
+        // Map each menu section to which edge of the viewport it exits from
+        var edgeMap = {
+            'new-game':    'left',
+            'options':     'right',
+            'quit':        'left',
+            'find-servers':'bottom'
+        };
+        var vw = window.innerWidth, vh = window.innerHeight;
+        document.querySelectorAll('.menu-item').forEach(function (item) {
+            var s = item.getAttribute('data-section');
+            var dir = edgeMap[s];
+            if (!dir) return;
+            var r = item.getBoundingClientRect();
+            var midY = r.top + r.height / 2;
+            if (dir === 'left')   menuAnchors[s] = { x: 0,           y: midY,  dir: 'left' };
+            if (dir === 'right')  menuAnchors[s] = { x: vw,          y: midY,  dir: 'right' };
+            if (dir === 'bottom') menuAnchors[s] = { x: vw * 0.18,   y: vh,    dir: 'bottom' };
+        });
+    }
+
+    function drawWires() {
+        if (!wiresSVG) return;
+        wiresSVG.innerHTML = '';
+        nodesLayer.querySelectorAll('.node').forEach(function (node) {
+            var pos = nodePositions[node.id];
+            if (!pos || parseFloat(node.style.opacity) < 0.05) return;
+            var anchor = menuAnchors[node.getAttribute('data-menu')];
+            if (!anchor) return;
+
+            var sx = anchor.x, sy = anchor.y;
+            var ex = pos.x,    ey = pos.y;
+            var d, t;
+
+            if (anchor.dir === 'bottom') {
+                t  = Math.max(80, Math.abs(ey - sy) * 0.5);
+                d  = 'M'+sx+' '+sy+' C'+sx+' '+(sy+t)+' '+ex+' '+(ey-t)+' '+ex+' '+ey;
+            } else if (anchor.dir === 'left') {
+                t  = Math.max(80, Math.abs(ex - sx) * 0.5);
+                d  = 'M'+sx+' '+sy+' C'+(sx-t)+' '+sy+' '+(ex+t)+' '+ey+' '+ex+' '+ey;
+            } else {
+                t  = Math.max(80, Math.abs(ex - sx) * 0.5);
+                d  = 'M'+sx+' '+sy+' C'+(sx+t)+' '+sy+' '+(ex-t)+' '+ey+' '+ex+' '+ey;
+            }
+
+            var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('d', d);
+            path.setAttribute('fill', 'none');
+            path.setAttribute('stroke', 'rgba(196,181,80,0.75)');
+            path.setAttribute('stroke-width', '3');
+            wiresSVG.appendChild(path);
+
+            // Port dot on the viewport outline
+            var c1 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            c1.setAttribute('cx', sx); c1.setAttribute('cy', sy); c1.setAttribute('r', '5');
+            c1.setAttribute('fill', 'rgba(196,181,80,0.9)');
+            wiresSVG.appendChild(c1);
+
+            // Port dot on the node
+            var c2 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            c2.setAttribute('cx', ex); c2.setAttribute('cy', ey); c2.setAttribute('r', '4');
+            c2.setAttribute('fill', 'rgba(196,181,80,0.7)');
+            wiresSVG.appendChild(c2);
+        });
+    }
+
+    function injectDialogClone(node) {
+        var SCALE = 0.55;
+        var dialogId = node.getAttribute('data-dialog');
+        var dialog = document.getElementById(dialogId);
+        if (!dialog) return;
+
+        // Temporarily show dialog off-screen to measure its natural size
+        dialog.style.visibility = 'hidden';
+        dialog.show();
+        var dw = dialog.offsetWidth || 600;
+        var dh = dialog.offsetHeight || 400;
+        dialog.close();
+        dialog.style.visibility = '';
+
+        // Clone the dialog and override its fixed positioning
+        var clone = dialog.cloneNode(true);
+        clone.removeAttribute('id');
+        clone.removeAttribute('open');
+        clone.classList.add('node-clone');
+        clone.querySelectorAll('button, input, select, a').forEach(function (el) {
+            el.style.pointerEvents = 'none';
+            el.removeAttribute('id');
+        });
+
+        var wrap = document.createElement('div');
+        wrap.className = 'node-scale-wrap';
+        wrap.style.width = dw + 'px';
+        wrap.style.height = dh + 'px';
+        wrap.style.transform = 'scale(' + SCALE + ')';
+        wrap.appendChild(clone);
+
+        var body = node.querySelector('.node-body');
+        body.innerHTML = '';
+        body.style.height = Math.round(dh * SCALE) + 'px';
+        body.appendChild(wrap);
+
+        node.style.width = Math.round(dw * SCALE) + 'px';
+    }
+
+    function flyOutNodes() {
+        var vw = window.innerWidth, vh = window.innerHeight;
+
+        // Inject real dialog content into each node first
+        nodesLayer.querySelectorAll('.node').forEach(injectDialogClone);
+
+        // Recompute positions now that nodes have real widths
+        var defaults = {
+            'node-new-game': { x: -Math.round(vw * 0.28), y: 60 },
+            'node-options': { x: vw + 20, y: 60 },
+            'node-quit': { x: -Math.round(vw * 0.28), y: Math.round(vh * 0.44) },
+            'node-servers': { x: Math.round(vw * 0.5) - 237, y: vh + 50 }
+        };
+
+        nodesLayer.querySelectorAll('.node').forEach(function (node, i) {
+            var cx = vw / 2 - (parseInt(node.style.width) / 2 || 150);
+            var cy = vh / 2 - 50;
+            node.style.transition = 'none';
+            node.style.left = cx + 'px';
+            node.style.top = cy + 'px';
+            node.style.opacity = '0';
+            var target = defaults[node.id] || { x: cx, y: cy };
+            setTimeout(function () {
+                node.style.transition = 'left 0.65s cubic-bezier(0.16,1,0.3,1), top 0.65s cubic-bezier(0.16,1,0.3,1), opacity 0.4s ease';
+                nodePositions[node.id] = target;
+                node.style.left = target.x + 'px';
+                node.style.top = target.y + 'px';
+                node.style.opacity = '1';
+                setTimeout(drawWires, 700);
+            }, 180 + i * 110);
+        });
+    }
+
+    function hideNodes() {
+        wiresSVG.innerHTML = '';
+        nodesLayer.querySelectorAll('.node').forEach(function (node) {
+            node.style.transition = 'opacity 0.25s ease';
+            node.style.opacity = '0';
+        });
+    }
+
+    // ── Node drag (title bar only) ────────────────────────────────────────────
+    var draggingNode = null, ndx = 0, ndy = 0, nox = 0, noy = 0;
+
+    nodesLayer.addEventListener('mousedown', function (e) {
+        if (!isWorkingsMode || !e.target.closest('.node-bar')) return;
+        draggingNode = e.target.closest('.node');
+        ndx = e.clientX; ndy = e.clientY;
+        var p = nodePositions[draggingNode.id] || { x: 0, y: 0 };
+        nox = p.x; noy = p.y;
+        draggingNode.style.transition = 'none';
+        draggingNode.style.zIndex = '10';
+        e.stopPropagation();
+    });
+
+    document.addEventListener('mousemove', function (e) {
+        if (!draggingNode) return;
+        var wx = nox + (e.clientX - ndx) / currentScale;
+        var wy = noy + (e.clientY - ndy) / currentScale;
+        nodePositions[draggingNode.id] = { x: wx, y: wy };
+        draggingNode.style.left = wx + 'px';
+        draggingNode.style.top = wy + 'px';
+        drawWires();
+    });
+
+    document.addEventListener('mouseup', function () {
+        if (draggingNode) { draggingNode.style.zIndex = ''; draggingNode = null; }
+    });
+
+    // ── Double-click node → open full dialog ─────────────────────────────────
+    nodesLayer.addEventListener('dblclick', function (e) {
+        var node = e.target.closest('.node');
+        if (!node) return;
+        var dialog = document.getElementById(node.getAttribute('data-dialog'));
+        if (dialog) openDialog(dialog);
     });
 });
