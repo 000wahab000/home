@@ -76,9 +76,9 @@ body {
 }
 
 body.zoomed-out #app-viewport {
-    border: 1px solid rgba(255,255,255,0.12);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 6px;
-    box-shadow: 0 6px 28px rgba(0,0,0,0.7);
+    box-shadow: 0 6px 28px rgba(0, 0, 0, 0.7);
     cursor: grab;
 }
 
@@ -573,17 +573,17 @@ body.zoomed-out.is-dragging #app-viewport {
     position: absolute;
     pointer-events: auto;
     background: #1a1c22;
-    border: 1px solid rgba(255,255,255,0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     color: #b8b8c8;
     opacity: 0;
     user-select: none;
-    box-shadow: 0 6px 28px rgba(0,0,0,0.7);
+    box-shadow: 0 6px 28px rgba(0, 0, 0, 0.7);
     overflow: hidden;
 }
 
 .node-bar {
     background: #111318;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     padding: 5px 8px;
     font-size: 10px;
     color: #8888a0;
@@ -625,8 +625,13 @@ body.zoomed-out.is-dragging #app-viewport {
     gap: 8px;
 }
 
-.nk { color: rgba(255,255,255,0.35); }
-.nv { color: #c0bfa0; }
+.nk {
+    color: rgba(255, 255, 255, 0.35);
+}
+
+.nv {
+    color: #c0bfa0;
+}
 
 .nk-divider {
     border-top: 1px solid rgba(196, 181, 80, 0.15);
@@ -634,7 +639,7 @@ body.zoomed-out.is-dragging #app-viewport {
 }
 
 .nk-bio {
-    color: rgba(192,191,160,0.65);
+    color: rgba(192, 191, 160, 0.65);
     font-size: 10px;
     line-height: 1.5;
 }
@@ -643,10 +648,38 @@ body.zoomed-out.is-dragging #app-viewport {
     display: flex;
     justify-content: space-between;
     padding: 2px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
     font-size: 10px;
 }
 
-.np-live { color: #7ecb6e; }
-.np-done { color: rgba(255,255,255,0.4); }
-.np-wip  { color: rgba(196,181,80,0.75); }
+.np-live {
+    color: #7ecb6e;
+}
+
+.np-done {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.np-wip {
+    color: rgba(196, 181, 80, 0.75);
+}
+
+/* Inner wrapper for sliced dialog parts inside nodes */
+.node-part-inner {
+    background: rgba(75, 85, 60, 0.95);
+    padding: 8px 10px;
+    min-width: 120px;
+    color: #c0bfa0;
+    font-size: 13px;
+}
+
+.node-part-inner label {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 11px;
+    display: block;
+    margin-bottom: 3px;
+}
+
+.node-part-inner .server-browser {
+    min-width: 480px;
+}

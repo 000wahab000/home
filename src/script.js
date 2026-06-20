@@ -438,15 +438,70 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ─── NODE GRAPH ──────────────────────────────────────────────────────────
 
-    var nodePositions = {}; // world-space top-left of each node
+    var nodePositions = {};   // world-space top-left of every node
+    var childDragOffsets = {};   // offsets of children from hub at drag-start
 
+    // ── Helper: get 4 edge-midpoint ports of a positioned node ───────────────
+    function getPorts(pos, w, h) {
+        return [
+            { x: pos.x + w / 2, y: pos.y, dir: 'top' },
+            { x: pos.x + w / 2, y: pos.y + h, dir: 'bottom' },
+            { x: pos.x, y: pos.y + h / 2, dir: 'left' },
+            { x: pos.x + w, y: pos.y + h / 2, dir: 'right' }
+        ];
+    }
+
+    // ── Helper: draw one bezier path + two port dots ──────────────────────────
+    function drawWire(sx, sy, sdx, tx, ty, tdx, tdy, stroke) {
+        var t = Math.max(50, Math.sqrt((tx - sx) * (tx - sx) + (ty - sy) * (ty - sy)) * 0.4);
+        var cp1x = sx + sdx * t, cp1y = sy + (sdx === 0 ? (ty > sy ? 1 : -1) * t : 0);
+        var cp2x = tx + tdx * t, cp2y = ty + tdy * t;
+        var d = 'M' + sx + ' ' + sy + ' C' + cp1x + ' ' + cp1y + ' ' + cp2x + ' ' + cp2y + ' ' + tx + ' ' + ty;
+
+        var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', d);
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke', stroke);
+        path.setAttribute('stroke-width', '3');
+        wiresSVG.appendChild(path);
+
+        var c1 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        c1.setAttribute('cx', sx); c1.setAttribute('cy', sy); c1.setAttribute('r', '5');
+        c1.setAttribute('fill', stroke);
+        wiresSVG.appendChild(c1);
+
+        var c2 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        c2.setAttribute('cx', tx); c2.setAttribute('cy', ty); c2.setAttribute('r', '4');
+        c2.setAttribute('fill', stroke);
+        wiresSVG.appendChild(c2);
+    }
+
+    // ── Wire tangent direction from a port direction string ───────────────────
+    function tangent(dir) {
+        if (dir === 'left') return { dx: -1, dy: 0 };
+        if (dir === 'right') return { dx: 1, dy: 0 };
+        if (dir === 'top') return { dx: 0, dy: -1 };
+        return { dx: 0, dy: 1 };   // bottom
+    }
+
+    // ── Nearest-port pair between two port arrays ─────────────────────────────
+    function nearestPair(aPorts, bPorts) {
+        var best = null, min = Infinity;
+        aPorts.forEach(function (a) {
+            bPorts.forEach(function (b) {
+                var dx = a.x - b.x, dy = a.y - b.y, d = dx * dx + dy * dy;
+                if (d < min) { min = d; best = { a: a, b: b }; }
+            });
+        });
+        return best;
+    }
+
+    // ── Main wire draw (called every frame) ───────────────────────────────────
     function drawWires() {
         if (!wiresSVG) return;
         wiresSVG.innerHTML = '';
-        var vw = window.innerWidth;
-        var vh = window.innerHeight;
+        var vw = window.innerWidth, vh = window.innerHeight;
 
-        // Viewport ports (centers of the edges)
         var vPorts = [
             { x: vw / 2, y: 0, dir: 'top' },
             { x: vw / 2, y: vh, dir: 'bottom' },
@@ -454,154 +509,249 @@ document.addEventListener('DOMContentLoaded', function () {
             { x: vw, y: vh / 2, dir: 'right' }
         ];
 
-        nodesLayer.querySelectorAll('.node').forEach(function (node) {
-            var pos = nodePositions[node.id];
-            if (!pos || parseFloat(node.style.opacity) < 0.05) return;
+        // Level 1 — viewport → hub  (gold)
+        nodesLayer.querySelectorAll('.hub-node').forEach(function (hub) {
+            var pos = nodePositions[hub.id];
+            if (!pos || parseFloat(hub.style.opacity) < 0.05) return;
+            var w = hub.offsetWidth || 200, h = hub.offsetHeight || 150;
+            var pair = nearestPair(vPorts, getPorts(pos, w, h));
+            if (!pair) return;
+            var ta = tangent(pair.a.dir), tb = tangent(pair.b.dir);
+            drawWire(pair.a.x, pair.a.y, ta.dx, pair.b.x, pair.b.y, tb.dx, tb.dy, 'rgba(196,181,80,0.85)');
+        });
 
-            var w = node.offsetWidth || 200;
-            var h = node.offsetHeight || 150;
-            var ex = pos.x;
-            var ey = pos.y;
-
-            // Node ports (centers of the edges)
-            var nPorts = [
-                { x: ex + w / 2, y: ey, dir: 'top' },
-                { x: ex + w / 2, y: ey + h, dir: 'bottom' },
-                { x: ex, y: ey + h / 2, dir: 'left' },
-                { x: ex + w, y: ey + h / 2, dir: 'right' }
-            ];
-
-            // Find closest pair of (viewport port, node port)
-            var minDist = Infinity;
-            var bestV = null;
-            var bestN = null;
-
-            vPorts.forEach(function (vp) {
-                nPorts.forEach(function (np) {
-                    var dx = vp.x - np.x;
-                    var dy = vp.y - np.y;
-                    var dist = dx * dx + dy * dy;
-                    if (dist < minDist) {
-                        minDist = dist;
-                        bestV = vp;
-                        bestN = np;
-                    }
-                });
-            });
-
-            if (!bestV || !bestN) return;
-
-            var sx = bestV.x, sy = bestV.y;
-            var tx = bestN.x, ty = bestN.y;
-
-            // Determine tangents based on directions
-            var dist = Math.sqrt(minDist);
-            var t = Math.max(50, dist * 0.4);
-
-            var cp1x = sx, cp1y = sy;
-            if (bestV.dir === 'left') cp1x -= t;
-            if (bestV.dir === 'right') cp1x += t;
-            if (bestV.dir === 'top') cp1y -= t;
-            if (bestV.dir === 'bottom') cp1y += t;
-
-            var cp2x = tx, cp2y = ty;
-            if (bestN.dir === 'left') cp2x -= t;
-            if (bestN.dir === 'right') cp2x += t;
-            if (bestN.dir === 'top') cp2y -= t;
-            if (bestN.dir === 'bottom') cp2y += t;
-
-            var d = 'M' + sx + ' ' + sy + ' C' + cp1x + ' ' + cp1y + ' ' + cp2x + ' ' + cp2y + ' ' + tx + ' ' + ty;
-
-            var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            path.setAttribute('d', d);
-            path.setAttribute('fill', 'none');
-            path.setAttribute('stroke', 'rgba(196,181,80,0.75)');
-            path.setAttribute('stroke-width', '3');
-            wiresSVG.appendChild(path);
-
-            // Port dot on the viewport outline
-            var c1 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            c1.setAttribute('cx', sx); c1.setAttribute('cy', sy); c1.setAttribute('r', '5');
-            c1.setAttribute('fill', 'rgba(196,181,80,0.9)');
-            wiresSVG.appendChild(c1);
-
-            // Port dot on the node
-            var c2 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            c2.setAttribute('cx', tx); c2.setAttribute('cy', ty); c2.setAttribute('r', '4');
-            c2.setAttribute('fill', 'rgba(196,181,80,0.7)');
-            wiresSVG.appendChild(c2);
+        // Level 2 — hub → child  (steel-blue)
+        nodesLayer.querySelectorAll('.child-node').forEach(function (child) {
+            var cpos = nodePositions[child.id];
+            if (!cpos || parseFloat(child.style.opacity) < 0.05) return;
+            var parentId = child.getAttribute('data-parent');
+            var hub = document.getElementById(parentId);
+            if (!hub) return;
+            var hpos = nodePositions[hub.id];
+            if (!hpos) return;
+            var hw = hub.offsetWidth || 200, hh = hub.offsetHeight || 150;
+            var cw = child.offsetWidth || 150, ch = child.offsetHeight || 80;
+            var pair = nearestPair(getPorts(hpos, hw, hh), getPorts(cpos, cw, ch));
+            if (!pair) return;
+            var ta = tangent(pair.a.dir), tb = tangent(pair.b.dir);
+            drawWire(pair.a.x, pair.a.y, ta.dx, pair.b.x, pair.b.y, tb.dx, tb.dy, 'rgba(100,160,210,0.75)');
         });
     }
 
+    // ── Clone injector ────────────────────────────────────────────────────────
     function injectDialogClone(node) {
-        var SCALE = 0.55;
         var dialogId = node.getAttribute('data-dialog');
+        var part = node.getAttribute('data-part');   // null for hub nodes
         var dialog = document.getElementById(dialogId);
         if (!dialog) return;
 
-        // Temporarily show dialog off-screen to measure its natural size
-        dialog.style.visibility = 'hidden';
-        dialog.show();
-        var dw = dialog.offsetWidth || 600;
-        var dh = dialog.offsetHeight || 400;
-        dialog.close();
-        dialog.style.visibility = '';
+        var SCALE = 0.7;
 
-        // Clone the dialog and override its fixed positioning
+        if (!part) {
+            // HUB NODE: full dialog clone
+            dialog.style.visibility = 'hidden';
+            dialog.show();
+            var dw = dialog.offsetWidth || 600;
+            var dh = dialog.offsetHeight || 400;
+            dialog.close();
+            dialog.style.visibility = '';
+
+            var clone = dialog.cloneNode(true);
+            clone.removeAttribute('id');
+            clone.removeAttribute('open');
+            clone.classList.add('node-clone');
+            clone.querySelectorAll('button,input,select,a').forEach(function (el) {
+                el.style.pointerEvents = 'none';
+                el.removeAttribute('id');
+            });
+
+            var wrap = document.createElement('div');
+            wrap.className = 'node-scale-wrap';
+            wrap.style.width = dw + 'px';
+            wrap.style.height = dh + 'px';
+            wrap.style.transform = 'scale(' + SCALE + ')';
+            wrap.appendChild(clone);
+
+            var body = node.querySelector('.node-body');
+            body.innerHTML = '';
+            body.style.height = Math.round(dh * SCALE) + 'px';
+            body.appendChild(wrap);
+            node.style.width = Math.round(dw * SCALE) + 'px';
+            return;
+        }
+
+        // CHILD NODE: extract specific fragment
         var clone = dialog.cloneNode(true);
         clone.removeAttribute('id');
         clone.removeAttribute('open');
         clone.classList.add('node-clone');
-        clone.querySelectorAll('button, input, select, a').forEach(function (el) {
+        clone.querySelectorAll('button,input,select,a').forEach(function (el) {
             el.style.pointerEvents = 'none';
             el.removeAttribute('id');
         });
 
-        var wrap = document.createElement('div');
-        wrap.className = 'node-scale-wrap';
-        wrap.style.width = dw + 'px';
-        wrap.style.height = dh + 'px';
-        wrap.style.transform = 'scale(' + SCALE + ')';
-        wrap.appendChild(clone);
+        var extract = null;
+        if (part === 'map') extract = clone.querySelector('.map-selector');
+        else if (part === 'info') extract = clone.querySelector('.description');
+        else if (part === 'actions') extract = clone.querySelector('.footer-btns');
+        else if (part === 'name') extract = clone.querySelector('.player-name-section');
+        else if (part === 'spray') extract = clone.querySelector('.spraypaint-section');
+        else if (part === 'bio') extract = clone.querySelector('.symbol-rectangle');
+        else if (part === 'details') extract = clone.querySelector('.age-and-city-row');
+        else if (part === 'msg') extract = clone.querySelector('.content');
+        else if (part === 'live' || part === 'complete' || part === 'wip') {
+            var wrap2 = document.createElement('div');
+            wrap2.className = 'server-browser';
+            var hdr = clone.querySelector('.server-list-header');
+            if (hdr) wrap2.appendChild(hdr.cloneNode(true));
+            var lst = document.createElement('div');
+            lst.className = 'server-list';
+            clone.querySelectorAll('.server-item').forEach(function (item) {
+                var s = (item.querySelector('.project-status-column') || {}).textContent;
+                s = (s || '').trim().toLowerCase();
+                if (part === 'live' && s === 'live') lst.appendChild(item.cloneNode(true));
+                if (part === 'complete' && s === 'complete') lst.appendChild(item.cloneNode(true));
+                if (part === 'wip' && s === 'wip') lst.appendChild(item.cloneNode(true));
+            });
+            wrap2.appendChild(lst);
+            extract = wrap2;
+        }
 
-        var body = node.querySelector('.node-body');
-        body.innerHTML = '';
-        body.style.height = Math.round(dh * SCALE) + 'px';
-        body.appendChild(wrap);
+        var container = document.createElement('div');
+        container.className = 'node-part-inner';
+        if (extract) container.appendChild(extract);
+        else container.textContent = part;
 
-        node.style.width = Math.round(dw * SCALE) + 'px';
+        container.style.cssText = 'position:fixed;left:-9999px;top:-9999px;visibility:hidden';
+        document.body.appendChild(container);
+        var dw2 = Math.max(container.offsetWidth, 60);
+        var dh2 = Math.max(container.offsetHeight, 30);
+        document.body.removeChild(container);
+        container.style.cssText = '';
+
+        var scaleWrap = document.createElement('div');
+        scaleWrap.className = 'node-scale-wrap';
+        scaleWrap.style.width = dw2 + 'px';
+        scaleWrap.style.height = dh2 + 'px';
+        scaleWrap.style.transform = 'scale(' + SCALE + ')';
+        scaleWrap.appendChild(container);
+
+        var body2 = node.querySelector('.node-body');
+        body2.innerHTML = '';
+        body2.style.height = Math.round(dh2 * SCALE) + 'px';
+        body2.appendChild(scaleWrap);
+        node.style.width = Math.round(dw2 * SCALE) + 'px';
     }
 
+    // ── Fly-out ───────────────────────────────────────────────────────────────
     function flyOutNodes() {
         var vw = window.innerWidth, vh = window.innerHeight;
 
-        // Inject real dialog content into each node first
+        // Inject clones for all nodes
         nodesLayer.querySelectorAll('.node').forEach(injectDialogClone);
 
-        // Recompute positions now that nodes have real widths
-        var defaults = {
-            'node-new-game': { x: -Math.round(vw * 0.28), y: 60 },
-            'node-options': { x: vw + 20, y: 60 },
-            'node-quit': { x: -Math.round(vw * 0.28), y: Math.round(vh * 0.44) },
-            'node-servers': { x: Math.round(vw * 0.5) - 237, y: vh + 50 }
+        // Hub target positions
+        var hubTargets = {
+            'hub-ng': { x: -Math.round(vw * 0.30), y: 40 },
+            'hub-opt': { x: vw + 20, y: 40 },
+            'hub-quit': { x: -Math.round(vw * 0.15), y: Math.round(vh * 0.44) },
+            'hub-srv': { x: Math.round(vw * 0.22), y: vh + 30 }
         };
 
-        nodesLayer.querySelectorAll('.node').forEach(function (node, i) {
-            var cx = vw / 2 - (parseInt(node.style.width) / 2 || 150);
-            var cy = vh / 2 - 50;
+        // Read hub sizes after injection
+        var hubSizes = {};
+        nodesLayer.querySelectorAll('.hub-node').forEach(function (hub) {
+            hubSizes[hub.id] = { w: hub.offsetWidth || 200, h: hub.offsetHeight || 150 };
+        });
+
+        // Compute child positions beyond their parent hub
+        var GAP = 18, SEP = 12;
+        var childTargets = {};
+        var childGroups = {};
+        nodesLayer.querySelectorAll('.child-node').forEach(function (child) {
+            var pid = child.getAttribute('data-parent');
+            if (!childGroups[pid]) childGroups[pid] = [];
+            childGroups[pid].push(child);
+        });
+
+        Object.keys(hubTargets).forEach(function (hid) {
+            var ht = hubTargets[hid];
+            var hs = hubSizes[hid] || { w: 200, h: 150 };
+            var kids = childGroups[hid] || [];
+            var hcx = ht.x + hs.w / 2;
+            var hcy = ht.y + hs.h / 2;
+
+            // Direction the hub sits relative to viewport center
+            var dir;
+            if (hcy > vh * 0.85) dir = 'bottom';
+            else if (hcx < vw / 2) dir = 'left';
+            else dir = 'right';
+
+            kids.forEach(function (child, i) {
+                var cw = child.offsetWidth || 150;
+                var ch = child.offsetHeight || 80;
+                var cx, cy;
+                if (dir === 'left') {
+                    cx = ht.x - cw - GAP;
+                    cy = ht.y + i * (ch + SEP);
+                } else if (dir === 'right') {
+                    cx = ht.x + hs.w + GAP;
+                    cy = ht.y + i * (ch + SEP);
+                } else {
+                    cx = ht.x + i * (cw + SEP);
+                    cy = ht.y + hs.h + GAP;
+                }
+                childTargets[child.id] = { x: cx, y: cy };
+            });
+        });
+
+        var allCenter = { x: vw / 2 - 100, y: vh / 2 - 40 };
+
+        // Start everyone at center, hidden
+        nodesLayer.querySelectorAll('.node').forEach(function (node) {
             node.style.transition = 'none';
-            node.style.left = cx + 'px';
-            node.style.top = cy + 'px';
+            node.style.left = allCenter.x + 'px';
+            node.style.top = allCenter.y + 'px';
             node.style.opacity = '0';
-            var target = defaults[node.id] || { x: cx, y: cy };
+        });
+
+        // Animate hubs first
+        var hubNodes = Array.from(nodesLayer.querySelectorAll('.hub-node'));
+        hubNodes.forEach(function (hub, i) {
+            var tgt = hubTargets[hub.id] || allCenter;
             setTimeout(function () {
-                node.style.transition = 'left 0.65s cubic-bezier(0.16,1,0.3,1), top 0.65s cubic-bezier(0.16,1,0.3,1), opacity 0.4s ease';
-                nodePositions[node.id] = target;
-                node.style.left = target.x + 'px';
-                node.style.top = target.y + 'px';
-                node.style.opacity = '1';
-                setTimeout(drawWires, 700);
-            }, 180 + i * 110);
+                hub.style.transition = 'left 0.65s cubic-bezier(0.16,1,0.3,1), top 0.65s cubic-bezier(0.16,1,0.3,1), opacity 0.4s ease';
+                nodePositions[hub.id] = tgt;
+                hub.style.left = tgt.x + 'px';
+                hub.style.top = tgt.y + 'px';
+                hub.style.opacity = '1';
+            }, 120 + i * 110);
+        });
+
+        // Animate children after hubs land
+        var hubDelay = 120 + hubNodes.length * 110 + 650;
+        var childNodes = Array.from(nodesLayer.querySelectorAll('.child-node'));
+        childNodes.forEach(function (child, i) {
+            var pid = child.getAttribute('data-parent');
+            var hubTgt = hubTargets[pid] || allCenter;
+            var tgt = childTargets[child.id] || hubTgt;
+
+            setTimeout(function () {
+                // Snap to hub position first (invisible)
+                child.style.transition = 'none';
+                child.style.left = hubTgt.x + 'px';
+                child.style.top = hubTgt.y + 'px';
+                child.style.opacity = '0';
+            }, hubDelay - 20);
+
+            setTimeout(function () {
+                child.style.transition = 'left 0.55s cubic-bezier(0.16,1,0.3,1), top 0.55s cubic-bezier(0.16,1,0.3,1), opacity 0.35s ease';
+                nodePositions[child.id] = tgt;
+                child.style.left = tgt.x + 'px';
+                child.style.top = tgt.y + 'px';
+                child.style.opacity = '1';
+                setTimeout(drawWires, 600);
+            }, hubDelay + i * 65);
         });
     }
 
@@ -613,7 +763,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // ── Node drag (title bar only) ────────────────────────────────────────────
+    // ── Node drag — hub drags children rigidly ────────────────────────────────
     var draggingNode = null, ndx = 0, ndy = 0, nox = 0, noy = 0;
 
     nodesLayer.addEventListener('mousedown', function (e) {
@@ -624,6 +774,16 @@ document.addEventListener('DOMContentLoaded', function () {
         nox = p.x; noy = p.y;
         draggingNode.style.transition = 'none';
         draggingNode.style.zIndex = '10';
+
+        // Capture initial child positions if dragging a hub
+        childDragOffsets = {};
+        if (draggingNode.classList.contains('hub-node')) {
+            nodesLayer.querySelectorAll('.child-node[data-parent="' + draggingNode.id + '"]').forEach(function (child) {
+                var cp = nodePositions[child.id] || { x: 0, y: 0 };
+                childDragOffsets[child.id] = { x: cp.x - nox, y: cp.y - noy };
+                child.style.transition = 'none';
+            });
+        }
         e.stopPropagation();
     });
 
@@ -634,6 +794,18 @@ document.addEventListener('DOMContentLoaded', function () {
         nodePositions[draggingNode.id] = { x: wx, y: wy };
         draggingNode.style.left = wx + 'px';
         draggingNode.style.top = wy + 'px';
+
+        // Move children rigidly with hub
+        if (draggingNode.classList.contains('hub-node')) {
+            nodesLayer.querySelectorAll('.child-node[data-parent="' + draggingNode.id + '"]').forEach(function (child) {
+                var off = childDragOffsets[child.id];
+                if (!off) return;
+                var cx = wx + off.x, cy = wy + off.y;
+                nodePositions[child.id] = { x: cx, y: cy };
+                child.style.left = cx + 'px';
+                child.style.top = cy + 'px';
+            });
+        }
         drawWires();
     });
 
@@ -641,7 +813,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (draggingNode) { draggingNode.style.zIndex = ''; draggingNode = null; }
     });
 
-    // ── Double-click node → open full dialog ─────────────────────────────────
+    // ── Double-click → open parent dialog ────────────────────────────────────
     nodesLayer.addEventListener('dblclick', function (e) {
         var node = e.target.closest('.node');
         if (!node) return;

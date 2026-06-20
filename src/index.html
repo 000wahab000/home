@@ -77,6 +77,7 @@
                             <br />
                             You can find my basic info and contacts in the 'Options' window and my projects in 'Find
                             servers'.
+                            My favourite Quote is - "To be is to Do TO do is to Be DO BE DO BE DOO"
                         </p>
                     </div>
                 </div>
@@ -140,13 +141,19 @@
                                     <pre>@@@@@@@@@@@@@@@@@@@
 @                                                   @
 @      hi, i'm wahab                                @
-@      cs student @ vesit, mumbai                   @
+@      cs student @ vesit, mumbai                    @
 @                                                   @
 @   i'm trying to <a class="build-smth-link cs-tooltip">build<span class="build-smth-tooltip-text text">View projects</span></a> cool <a class="build-smth-link cs-tooltip">things<span class="build-smth-tooltip-text text">View projects</span></a>      @
 @                                                   @
-@   ⌗  <a class="telegram-link" target="_blank" href="https://github.com/000wahab000">github</a>                              @
-@   in <a class="telegram-link" target="_blank" href="https://www.linkedin.com/in/wahabshafishaikh/">linkedin</a>                           @
-@   ⊙  <a class="telegram-link" target="_blank" href="https://leetcode.com/u/wahab_shaikjh/">leetcode</a>                          @
+@   ⌗  <a class="telegram-link" 
+        target="_blank" 
+        href="https://github.com/000wahab000">github</a>                                           @
+@   in <a class="telegram-link" 
+        target="_blank" 
+        href="https://www.linkedin.com/in/wahabshafishaikh/">linkedin</a>                              @
+@   ⊙  <a class="telegram-link" 
+        target="_blank" 
+        href="https://leetcode.com/u/wahab_shaikjh/">leetcode</a>                               @
 @                                                   @
 @@@@@@@@@@@@@@@@@@@</pre>
                                 </div>
@@ -311,26 +318,73 @@
     <div id="nodes-layer">
         <svg id="wires-svg" xmlns="http://www.w3.org/2000/svg"></svg>
 
-        <div class="node" id="node-new-game" data-dialog="new-game-dialog" data-menu="new-game">
+        <!-- HUB NODES (full dialog clones) -->
+        <div class="node hub-node" id="hub-ng"   data-dialog="new-game-dialog">
             <div class="node-bar">Create Server</div>
             <div class="node-body"></div>
         </div>
-
-        <div class="node" id="node-options" data-dialog="options-dialog" data-menu="options">
+        <div class="node hub-node" id="hub-opt"  data-dialog="options-dialog">
             <div class="node-bar">Options</div>
             <div class="node-body"></div>
         </div>
-
-        <div class="node" id="node-quit" data-dialog="quit-dialog" data-menu="quit">
+        <div class="node hub-node" id="hub-quit" data-dialog="quit-dialog">
             <div class="node-bar">Confirm</div>
             <div class="node-body"></div>
         </div>
-
-        <div class="node" id="node-servers" data-dialog="servers-dialog" data-menu="find-servers">
+        <div class="node hub-node" id="hub-srv"  data-dialog="servers-dialog">
             <div class="node-bar">Servers</div>
             <div class="node-body"></div>
         </div>
-    </div>
+
+        <!-- CHILD NODES: Create Server -->
+        <div class="node child-node" id="node-ng-map"     data-dialog="new-game-dialog" data-part="map"     data-parent="hub-ng">
+            <div class="node-bar">Map</div><div class="node-body"></div>
+        </div>
+        <div class="node child-node" id="node-ng-info"    data-dialog="new-game-dialog" data-part="info"    data-parent="hub-ng">
+            <div class="node-bar">Bio</div><div class="node-body"></div>
+        </div>
+        <div class="node child-node" id="node-ng-actions" data-dialog="new-game-dialog" data-part="actions" data-parent="hub-ng">
+            <div class="node-bar">Actions</div><div class="node-body"></div>
+        </div>
+
+        <!-- CHILD NODES: Options -->
+        <div class="node child-node" id="node-opt-name"    data-dialog="options-dialog" data-part="name"    data-parent="hub-opt">
+            <div class="node-bar">Name</div><div class="node-body"></div>
+        </div>
+        <div class="node child-node" id="node-opt-spray"   data-dialog="options-dialog" data-part="spray"   data-parent="hub-opt">
+            <div class="node-bar">Spraypaint</div><div class="node-body"></div>
+        </div>
+        <div class="node child-node" id="node-opt-bio"     data-dialog="options-dialog" data-part="bio"     data-parent="hub-opt">
+            <div class="node-bar">Bio</div><div class="node-body"></div>
+        </div>
+        <div class="node child-node" id="node-opt-details" data-dialog="options-dialog" data-part="details" data-parent="hub-opt">
+            <div class="node-bar">Details</div><div class="node-body"></div>
+        </div>
+        <div class="node child-node" id="node-opt-actions" data-dialog="options-dialog" data-part="actions" data-parent="hub-opt">
+            <div class="node-bar">Actions</div><div class="node-body"></div>
+        </div>
+
+        <!-- CHILD NODES: Quit -->
+        <div class="node child-node" id="node-quit-msg"  data-dialog="quit-dialog" data-part="msg"     data-parent="hub-quit">
+            <div class="node-bar">Message</div><div class="node-body"></div>
+        </div>
+        <div class="node child-node" id="node-quit-acts" data-dialog="quit-dialog" data-part="actions" data-parent="hub-quit">
+            <div class="node-bar">Actions</div><div class="node-body"></div>
+        </div>
+
+        <!-- CHILD NODES: Servers -->
+        <div class="node child-node" id="node-srv-live" data-dialog="servers-dialog" data-part="live"     data-parent="hub-srv">
+            <div class="node-bar">Live</div><div class="node-body"></div>
+        </div>
+        <div class="node child-node" id="node-srv-done" data-dialog="servers-dialog" data-part="complete" data-parent="hub-srv">
+            <div class="node-bar">Finished</div><div class="node-body"></div>
+        </div>
+        <div class="node child-node" id="node-srv-wip"  data-dialog="servers-dialog" data-part="wip"      data-parent="hub-srv">
+            <div class="node-bar">WIP</div><div class="node-body"></div>
+        </div>
+        <div class="node child-node" id="node-srv-acts" data-dialog="servers-dialog" data-part="actions"  data-parent="hub-srv">
+            <div class="node-bar">Actions</div><div class="node-body"></div>
+        </div>    </div>
 
     <script src="script.js"></script>
 </body>
