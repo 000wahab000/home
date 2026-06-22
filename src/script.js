@@ -664,45 +664,42 @@ document.addEventListener('DOMContentLoaded', function () {
             hubSizes[hub.id] = { w: hub.offsetWidth || 200, h: hub.offsetHeight || 150 };
         });
 
-        // Compute child positions beyond their parent hub
-        var GAP = 18, SEP = 12;
+        // Compute child positions to exactly match the target circuit diagram layout
         var childTargets = {};
-        var childGroups = {};
-        nodesLayer.querySelectorAll('.child-node').forEach(function (child) {
+        
+        nodesLayer.querySelectorAll('.child-node').forEach(function(child) {
             var pid = child.getAttribute('data-parent');
-            if (!childGroups[pid]) childGroups[pid] = [];
-            childGroups[pid].push(child);
-        });
+            var ht = hubTargets[pid] || { x: vw/2, y: vh/2 };
+            var hs = hubSizes[pid] || { w:200, h:150 };
+            var cw = child.offsetWidth || 150;
+            var ch = child.offsetHeight || 80;
+            
+            var cx = ht.x, cy = ht.y;
 
-        Object.keys(hubTargets).forEach(function (hid) {
-            var ht = hubTargets[hid];
-            var hs = hubSizes[hid] || { w: 200, h: 150 };
-            var kids = childGroups[hid] || [];
-            var hcx = ht.x + hs.w / 2;
-            var hcy = ht.y + hs.h / 2;
+            switch(child.id) {
+                // CREATE SERVER
+                case 'node-ng-map':     cx = ht.x - 40;       cy = ht.y - ch - 30; break;
+                case 'node-ng-info':    cx = ht.x - cw - 50;  cy = ht.y + 20; break;
+                case 'node-ng-actions': cx = ht.x - 80;       cy = ht.y + hs.h + 30; break;
 
-            // Direction the hub sits relative to viewport center
-            var dir;
-            if (hcy > vh * 0.85) dir = 'bottom';
-            else if (hcx < vw / 2) dir = 'left';
-            else dir = 'right';
+                // OPTIONS
+                case 'node-opt-name':    cx = ht.x + hs.w + 40; cy = ht.y - 20; break;
+                case 'node-opt-spray':   cx = ht.x + hs.w + 80; cy = ht.y + 60; break;
+                case 'node-opt-details': cx = ht.x + hs.w + 40; cy = ht.y + 150; break;
+                case 'node-opt-actions': cx = ht.x + hs.w + 10; cy = ht.y + 240; break;
+                case 'node-opt-bio':     cx = ht.x;             cy = ht.y + hs.h + 40; break;
 
-            kids.forEach(function (child, i) {
-                var cw = child.offsetWidth || 150;
-                var ch = child.offsetHeight || 80;
-                var cx, cy;
-                if (dir === 'left') {
-                    cx = ht.x - cw - GAP;
-                    cy = ht.y + i * (ch + SEP);
-                } else if (dir === 'right') {
-                    cx = ht.x + hs.w + GAP;
-                    cy = ht.y + i * (ch + SEP);
-                } else {
-                    cx = ht.x + i * (cw + SEP);
-                    cy = ht.y + hs.h + GAP;
-                }
-                childTargets[child.id] = { x: cx, y: cy };
-            });
+                // QUIT
+                case 'node-quit-msg':  cx = ht.x - cw/2 - 20; cy = ht.y - ch - 10; break;
+                case 'node-quit-acts': cx = ht.x + 20;        cy = ht.y + hs.h + 20; break;
+
+                // SERVERS
+                case 'node-srv-acts': cx = ht.x - 80;       cy = ht.y - ch - 10; break;
+                case 'node-srv-live': cx = ht.x - cw - 50;  cy = ht.y + 10; break;
+                case 'node-srv-done': cx = ht.x + 60;       cy = ht.y + hs.h + 40; break;
+                case 'node-srv-wip':  cx = ht.x + hs.w + 50;cy = ht.y + 10; break;
+            }
+            childTargets[child.id] = { x: cx, y: cy };
         });
 
         var allCenter = { x: vw / 2 - 100, y: vh / 2 - 40 };
