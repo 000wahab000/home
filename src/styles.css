@@ -579,6 +579,15 @@ body.zoomed-out.is-dragging #app-viewport {
     user-select: none;
     box-shadow: 0 6px 28px rgba(0, 0, 0, 0.7);
     overflow: hidden;
+    transform-origin: top left;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.node.node-selected {
+    box-shadow: 0 8px 36px rgba(0, 0, 0, 0.85);
+    border-color: rgba(255, 255, 255, 0.22);
+    transform: scale(1.06);
+    z-index: 20;
 }
 
 .node-bar {
@@ -589,6 +598,11 @@ body.zoomed-out.is-dragging #app-viewport {
     color: #8888a0;
     cursor: move;
     letter-spacing: 0.5px;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.node.node-selected .node-bar {
+    color: #fff;
 }
 
 .node-body {

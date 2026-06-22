@@ -451,12 +451,27 @@ document.addEventListener('DOMContentLoaded', function () {
         ];
     }
 
-    // ── Helper: draw one bezier path + two port dots ──────────────────────────
-    function drawWire(sx, sy, sdx, tx, ty, tdx, tdy, stroke) {
-        var t = Math.max(50, Math.sqrt((tx - sx) * (tx - sx) + (ty - sy) * (ty - sy)) * 0.4);
-        var cp1x = sx + sdx * t, cp1y = sy + (sdx === 0 ? (ty > sy ? 1 : -1) * t : 0);
-        var cp2x = tx + tdx * t, cp2y = ty + tdy * t;
-        var d = 'M' + sx + ' ' + sy + ' C' + cp1x + ' ' + cp1y + ' ' + cp2x + ' ' + cp2y + ' ' + tx + ' ' + ty;
+    // ── Bezier wire: smooth cubic curve + port dots ───────────────────────────
+    // sdir / tdir: 'left' | 'right' | 'top' | 'bottom'
+    function drawWire(sx, sy, sdir, tx, ty, tdir, stroke) {
+        // Convert port direction to unit tangent vector
+        var sdx = sdir === 'right' ? 1 : sdir === 'left' ? -1 : 0;
+        var sdy = sdir === 'bottom' ? 1 : sdir === 'top' ? -1 : 0;
+        var tdx = tdir === 'right' ? 1 : tdir === 'left' ? -1 : 0;
+        var tdy = tdir === 'bottom' ? 1 : tdir === 'top' ? -1 : 0;
+
+        var dist = Math.sqrt((tx - sx) * (tx - sx) + (ty - sy) * (ty - sy));
+        var t = Math.max(50, dist * 0.4);
+
+        var cp1x = sx + sdx * t;
+        var cp1y = sy + (sdx === 0 ? (ty > sy ? 1 : -1) * t : 0);
+        var cp2x = tx + tdx * t;
+        var cp2y = ty + tdy * t;
+
+        var d = 'M' + sx + ' ' + sy +
+            ' C' + cp1x + ' ' + cp1y +
+            ' ' + cp2x + ' ' + cp2y +
+            ' ' + tx + ' ' + ty;
 
         var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         path.setAttribute('d', d);
@@ -474,14 +489,6 @@ document.addEventListener('DOMContentLoaded', function () {
         c2.setAttribute('cx', tx); c2.setAttribute('cy', ty); c2.setAttribute('r', '4');
         c2.setAttribute('fill', stroke);
         wiresSVG.appendChild(c2);
-    }
-
-    // ── Wire tangent direction from a port direction string ───────────────────
-    function tangent(dir) {
-        if (dir === 'left') return { dx: -1, dy: 0 };
-        if (dir === 'right') return { dx: 1, dy: 0 };
-        if (dir === 'top') return { dx: 0, dy: -1 };
-        return { dx: 0, dy: 1 };   // bottom
     }
 
     // ── Nearest-port pair between two port arrays ─────────────────────────────
@@ -516,8 +523,7 @@ document.addEventListener('DOMContentLoaded', function () {
             var w = hub.offsetWidth || 200, h = hub.offsetHeight || 150;
             var pair = nearestPair(vPorts, getPorts(pos, w, h));
             if (!pair) return;
-            var ta = tangent(pair.a.dir), tb = tangent(pair.b.dir);
-            drawWire(pair.a.x, pair.a.y, ta.dx, pair.b.x, pair.b.y, tb.dx, tb.dy, 'rgba(196,181,80,0.85)');
+            drawWire(pair.a.x, pair.a.y, pair.a.dir, pair.b.x, pair.b.y, pair.b.dir, 'rgba(196,181,80,0.85)');
         });
 
         // Level 2 — hub → child  (steel-blue)
@@ -533,8 +539,7 @@ document.addEventListener('DOMContentLoaded', function () {
             var cw = child.offsetWidth || 150, ch = child.offsetHeight || 80;
             var pair = nearestPair(getPorts(hpos, hw, hh), getPorts(cpos, cw, ch));
             if (!pair) return;
-            var ta = tangent(pair.a.dir), tb = tangent(pair.b.dir);
-            drawWire(pair.a.x, pair.a.y, ta.dx, pair.b.x, pair.b.y, tb.dx, tb.dy, 'rgba(100,160,210,0.75)');
+            drawWire(pair.a.x, pair.a.y, pair.a.dir, pair.b.x, pair.b.y, pair.b.dir, 'rgba(100,160,210,0.75)');
         });
     }
 
@@ -664,42 +669,83 @@ document.addEventListener('DOMContentLoaded', function () {
             hubSizes[hub.id] = { w: hub.offsetWidth || 200, h: hub.offsetHeight || 150 };
         });
 
-        // Compute child positions to exactly match the target circuit diagram layout
+        // Compute child positions: dynamic stacking, min 20px between node edges
+        var CHILD_GAP = 20;  // minimum gap between child node edges
+        var CHILD_STUB = 30;  // gap between hub edge and the child column/row
+
         var childTargets = {};
-        
-        nodesLayer.querySelectorAll('.child-node').forEach(function(child) {
+
+        // Group children by parent hub ID
+        var childGroups = {};
+        nodesLayer.querySelectorAll('.child-node').forEach(function (child) {
             var pid = child.getAttribute('data-parent');
-            var ht = hubTargets[pid] || { x: vw/2, y: vh/2 };
-            var hs = hubSizes[pid] || { w:200, h:150 };
-            var cw = child.offsetWidth || 150;
-            var ch = child.offsetHeight || 80;
-            
-            var cx = ht.x, cy = ht.y;
+            if (!childGroups[pid]) childGroups[pid] = [];
+            childGroups[pid].push(child);
+        });
 
-            switch(child.id) {
-                // CREATE SERVER
-                case 'node-ng-map':     cx = ht.x - 40;       cy = ht.y - ch - 30; break;
-                case 'node-ng-info':    cx = ht.x - cw - 50;  cy = ht.y + 20; break;
-                case 'node-ng-actions': cx = ht.x - 80;       cy = ht.y + hs.h + 30; break;
+        Object.keys(hubTargets).forEach(function (hid) {
+            var ht = hubTargets[hid];
+            var hs = hubSizes[hid] || { w: 200, h: 150 };
+            var kids = childGroups[hid] || [];
 
-                // OPTIONS
-                case 'node-opt-name':    cx = ht.x + hs.w + 40; cy = ht.y - 20; break;
-                case 'node-opt-spray':   cx = ht.x + hs.w + 80; cy = ht.y + 60; break;
-                case 'node-opt-details': cx = ht.x + hs.w + 40; cy = ht.y + 150; break;
-                case 'node-opt-actions': cx = ht.x + hs.w + 10; cy = ht.y + 240; break;
-                case 'node-opt-bio':     cx = ht.x;             cy = ht.y + hs.h + 40; break;
+            // Determine which side of the hub children should stack on
+            var hcx = ht.x + hs.w / 2;
+            var hcy = ht.y + hs.h / 2;
 
-                // QUIT
-                case 'node-quit-msg':  cx = ht.x - cw/2 - 20; cy = ht.y - ch - 10; break;
-                case 'node-quit-acts': cx = ht.x + 20;        cy = ht.y + hs.h + 20; break;
+            var dir;
+            if (hcy > vh * 0.85) dir = 'bottom';  // hub-srv: row below
+            else if (hcx < vw / 2) dir = 'left';    // hub-ng, hub-quit: column to the left
+            else dir = 'right';   // hub-opt: column to the right
 
-                // SERVERS
-                case 'node-srv-acts': cx = ht.x - 80;       cy = ht.y - ch - 10; break;
-                case 'node-srv-live': cx = ht.x - cw - 50;  cy = ht.y + 10; break;
-                case 'node-srv-done': cx = ht.x + 60;       cy = ht.y + hs.h + 40; break;
-                case 'node-srv-wip':  cx = ht.x + hs.w + 50;cy = ht.y + 10; break;
+            // Cursor tracks where the next child starts
+            var cursorX = 0, cursorY = 0;
+
+            if (dir === 'left') {
+                cursorY = ht.y;                           // align column top with hub top
+                kids.forEach(function (child) {
+                    var cw = child.offsetWidth || 150;
+                    var ch = child.offsetHeight || 80;
+                    childTargets[child.id] = {
+                        x: ht.x - cw - CHILD_STUB,       // place column to the LEFT of hub
+                        y: cursorY
+                    };
+                    cursorY += ch + CHILD_GAP;            // advance cursor down by node height + gap
+                });
+
+            } else if (dir === 'right') {
+                cursorY = ht.y;                           // align column top with hub top
+                kids.forEach(function (child) {
+                    var ch = child.offsetHeight || 80;
+                    childTargets[child.id] = {
+                        x: ht.x + hs.w + CHILD_STUB,     // place column to the RIGHT of hub
+                        y: cursorY
+                    };
+                    cursorY += ch + CHILD_GAP;
+                });
+
+            } else {
+                // 'bottom' (hub-srv): center children horizontally under the hub
+                // with extra spacing since server nodes are the widest
+                var SRV_GAP = 40;  // larger gap for server children
+
+                // Pre-compute total row width to center it under the hub
+                var totalW = 0;
+                kids.forEach(function (child) {
+                    totalW += (child.offsetWidth || 150);
+                });
+                totalW += SRV_GAP * (kids.length - 1);
+
+                // Start cursorX so the row is centered under the hub center
+                cursorX = (ht.x + hs.w / 2) - totalW / 2;
+                kids.forEach(function (child) {
+                    var cw = child.offsetWidth || 150;
+                    childTargets[child.id] = {
+                        x: cursorX,
+                        y: ht.y + hs.h + CHILD_STUB
+                    };
+                    cursorX += cw + SRV_GAP;
+                });
             }
-            childTargets[child.id] = { x: cx, y: cy };
         });
 
         var allCenter = { x: vw / 2 - 100, y: vh / 2 - 40 };
@@ -760,17 +806,52 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // ── Node selection — one node at a time, accent colour per hub family ────
+    var selectedNode = null;
+
+    // Accent colour for each hub; children inherit their parent hub's colour
+    var HUB_COLORS = {
+        'hub-ng':   '#1a8080',   // dark teal          — Create Server
+        'hub-opt':  '#993333',   // dark red-teal       — Options
+        'hub-quit': '#2d7a40',   // dark green-teal     — Quit / Confirm
+        'hub-srv':  '#7a6e1a'    // dark yellow-teal    — Servers
+    };
+
+    function getNodeAccent(node) {
+        var id = node.id;
+        if (HUB_COLORS[id]) return HUB_COLORS[id];
+        var parentId = node.getAttribute('data-parent');
+        return HUB_COLORS[parentId] || '#2db8b8';
+    }
+
+    function clearSelection() {
+        if (!selectedNode) return;
+        selectedNode.classList.remove('node-selected');
+        var bar = selectedNode.querySelector('.node-bar');
+        if (bar) bar.style.background = '';
+        selectedNode = null;
+    }
+
+    function selectNode(node) {
+        selectedNode = node;
+        node.classList.add('node-selected');
+        var bar = node.querySelector('.node-bar');
+        if (bar) bar.style.background = getNodeAccent(node);
+    }
+
     // ── Node drag — hub drags children rigidly ────────────────────────────────
     var draggingNode = null, ndx = 0, ndy = 0, nox = 0, noy = 0;
+    var dragMoved = false;   // distinguishes a real drag from a click
 
     nodesLayer.addEventListener('mousedown', function (e) {
         if (!isWorkingsMode || !e.target.closest('.node-bar')) return;
         draggingNode = e.target.closest('.node');
         ndx = e.clientX; ndy = e.clientY;
+        dragMoved = false;
         var p = nodePositions[draggingNode.id] || { x: 0, y: 0 };
         nox = p.x; noy = p.y;
         draggingNode.style.transition = 'none';
-        draggingNode.style.zIndex = '10';
+        draggingNode.style.zIndex = selectedNode === draggingNode ? '20' : '10';
 
         // Capture initial child positions if dragging a hub
         childDragOffsets = {};
@@ -786,6 +867,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.addEventListener('mousemove', function (e) {
         if (!draggingNode) return;
+        // Mark as a real drag if mouse moved more than 5px
+        if (!dragMoved && (Math.abs(e.clientX - ndx) > 5 || Math.abs(e.clientY - ndy) > 5)) {
+            dragMoved = true;
+        }
         var wx = nox + (e.clientX - ndx) / currentScale;
         var wy = noy + (e.clientY - ndy) / currentScale;
         nodePositions[draggingNode.id] = { x: wx, y: wy };
@@ -807,7 +892,23 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     document.addEventListener('mouseup', function () {
-        if (draggingNode) { draggingNode.style.zIndex = ''; draggingNode = null; }
+        if (draggingNode) {
+            // Restore transform transition after drag ends
+            draggingNode.style.transition = '';
+            draggingNode.style.zIndex = '';
+            draggingNode = null;
+        }
+    });
+
+    // ── Single-click → select node (only if it wasn't a drag) ────────────────
+    nodesLayer.addEventListener('click', function (e) {
+        if (!isWorkingsMode) return;
+        if (dragMoved) return;           // was a drag, not a click
+        var node = e.target.closest('.node');
+        if (!node) { clearSelection(); return; }
+        if (node === selectedNode) { clearSelection(); return; }  // toggle off
+        clearSelection();
+        selectNode(node);
     });
 
     // ── Double-click → open parent dialog ────────────────────────────────────
