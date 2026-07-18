@@ -2,8 +2,38 @@ function initOptionsDialog() {
     const dialog = document.getElementById('options-dialog');
     if (!dialog) return null;
 
-    // Spraypaint selectors now track mode name / filter only — no image preview.
-    // (The image preview div has been removed from the HTML.)
+    // Spraypaint image name → filename map
+    var SPRAY_IMAGES = {
+        'buzzcut':    'images/buzz cut mode.jpg',
+        'does_the_hat': 'images/hat mode.jpg',
+        'long_hair':  'images/Long hair mode.jpg',
+        'misty':      'images/Misty.jpg',
+        'dusty':      'images/Dusty.jpg'
+    };
+    var FILTER_CLASSES = ['filter-none', 'filter-orange', 'filter-yellow', 'filter-ltblue', 'filter-green'];
+
+    var previewImg = dialog.querySelector('#spraypaint-preview-img');
+    var imgSelect  = dialog.querySelector('#spraypaint-image');
+    var filterSel  = dialog.querySelector('#spraypaint-filter');
+    var ageRange   = dialog.querySelector('#age-range');
+    var ageValue   = dialog.querySelector('#age-value');
+
+    function updatePreview() {
+        if (!previewImg) return;
+        var src = SPRAY_IMAGES[imgSelect.value] || '';
+        previewImg.style.backgroundImage = src ? 'url("' + src + '")' : 'none';
+        FILTER_CLASSES.forEach(function(c) { previewImg.classList.remove(c); });
+        if (filterSel.value !== 'none') previewImg.classList.add('filter-' + filterSel.value);
+
+        // Misty and Dusty are 4 years old
+        var age = (imgSelect.value === 'misty' || imgSelect.value === 'dusty') ? 4 : 19;
+        if (ageRange) ageRange.value = age;
+        if (ageValue) ageValue.value = age;
+    }
+
+    if (imgSelect)  imgSelect.addEventListener('change', updatePreview);
+    if (filterSel)  filterSel.addEventListener('change', updatePreview);
+    updatePreview(); // set initial state
 
     dialog.querySelector('#options-ok').addEventListener('click', function () {
         dialog.close();
@@ -903,10 +933,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Hub target positions
         var hubTargets = {
-            'hub-ng': { x: -Math.round(vw * 0.30), y: 40 },
-            'hub-opt': { x: vw + 20, y: 40 },
-            'hub-quit': { x: -Math.round(vw * 0.15), y: Math.round(vh * 0.44) },
-            'hub-srv': { x: Math.round(vw * 0.22), y: vh + 30 }
+            'hub-ng':   { x: -Math.round(vw * 0.45), y: 40 },
+            'hub-opt':  { x: vw + 20, y: 40 },
+            'hub-quit': { x: -Math.round(vw * 0.15), y: Math.round(vh * 0.65) },
+            'hub-srv':  { x: Math.round(vw * 0.22), y: vh + 30 }
         };
 
         // Read hub sizes after injection
@@ -1005,24 +1035,29 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         // Position grandchildren (children of children, e.g. social nodes)
+        // Social nodes (GitHub/LeetCode/LinkedIn) under node-opt-bio go in a horizontal row
         Object.keys(childTargets).forEach(function (cid) {
             var grandKids = childGroups[cid];
-            if (grandKids && grandKids.length > 0) {
-                var ct = childTargets[cid];
-                var childEl = document.getElementById(cid);
-                var cw = childEl ? (childEl.offsetWidth || 150) : 150;
+            if (!grandKids || grandKids.length === 0) return;
+            var ct = childTargets[cid];
+            var childEl = document.getElementById(cid);
+            var ch = childEl ? (childEl.offsetHeight || 100) : 100;
 
-                // Stack vertically to the right of the child node
-                var cursorY = ct.y;
-                grandKids.forEach(function (gKid) {
-                    var gch = gKid.offsetHeight || 100;
-                    childTargets[gKid.id] = {
-                        x: ct.x + cw + CHILD_STUB,
-                        y: cursorY
-                    };
-                    cursorY += gch + CHILD_GAP;
-                });
-            }
+            // Lay them out horizontally, below the parent node
+            var HORIZ_GAP = 40;
+            var totalW = 0;
+            grandKids.forEach(function (gk) { totalW += (gk.offsetWidth || 320); });
+            totalW += HORIZ_GAP * (grandKids.length - 1);
+
+            var cursorX = ct.x - (totalW / 2) + (childEl ? (childEl.offsetWidth || 150) / 2 : 75);
+            grandKids.forEach(function (gKid) {
+                var gkw = gKid.offsetWidth || 320;
+                childTargets[gKid.id] = {
+                    x: cursorX,
+                    y: ct.y + ch + CHILD_STUB
+                };
+                cursorX += gkw + HORIZ_GAP;
+            });
         });
 
         var allCenter = { x: vw / 2 - 100, y: vh / 2 - 40 };

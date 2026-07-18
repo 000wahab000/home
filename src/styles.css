@@ -704,7 +704,7 @@ body.zoomed-out.is-dragging #app-viewport {
     padding: 10px 14px;
     font-size: 11px;
     color: #c0bfa0;
-    background: rgba(16, 18, 24, 0.97);
+    background: #1a1c22;
     cursor: default;
 }
 
@@ -726,9 +726,10 @@ body.zoomed-out.is-dragging #app-viewport {
     padding: 8px 0;
     text-align: center;
 }
+
 .spc-loading-sub {
     font-size: 9px;
-    color: rgba(255,255,255,0.3);
+    color: rgba(255, 255, 255, 0.3);
     font-style: italic;
 }
 
@@ -813,10 +814,10 @@ body.zoomed-out.is-dragging #app-viewport {
 .contrib-grid {
     display: flex;
     gap: 2px;
-    background: rgba(0,0,0,0.2);
+    background: rgba(0, 0, 0, 0.2);
     padding: 6px;
     border-radius: 4px;
-    border: 1px solid rgba(255,255,255,0.05);
+    border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .contrib-week {
@@ -829,20 +830,42 @@ body.zoomed-out.is-dragging #app-viewport {
     width: 8px;
     height: 8px;
     border-radius: 1px;
-    background: rgba(255,255,255,0.04);
+    background: rgba(255, 255, 255, 0.04);
 }
 
 /* GitHub Scheme (Gold/Amber tones matching CS UI) */
-.gh-level-1 { background: rgba(196, 181, 80, 0.3); }
-.gh-level-2 { background: rgba(196, 181, 80, 0.55); }
-.gh-level-3 { background: rgba(196, 181, 80, 0.8); }
-.gh-level-4 { background: #dcd070; }
+.gh-level-1 {
+    background: rgba(196, 181, 80, 0.3);
+}
+
+.gh-level-2 {
+    background: rgba(196, 181, 80, 0.55);
+}
+
+.gh-level-3 {
+    background: rgba(196, 181, 80, 0.8);
+}
+
+.gh-level-4 {
+    background: #dcd070;
+}
 
 /* LeetCode Scheme (Steel/Green tones) */
-.lc-level-1 { background: rgba(126, 203, 110, 0.3); }
-.lc-level-2 { background: rgba(126, 203, 110, 0.55); }
-.lc-level-3 { background: rgba(126, 203, 110, 0.8); }
-.lc-level-4 { background: #96e086; }
+.lc-level-1 {
+    background: rgba(126, 203, 110, 0.3);
+}
+
+.lc-level-2 {
+    background: rgba(126, 203, 110, 0.55);
+}
+
+.lc-level-3 {
+    background: rgba(126, 203, 110, 0.8);
+}
+
+.lc-level-4 {
+    background: #96e086;
+}
 
 /* ── GitHub Repos Grid ───────────────────────────────────────────────────── */
 
@@ -853,8 +876,8 @@ body.zoomed-out.is-dragging #app-viewport {
 }
 
 .spc-repo-item {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.07);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.07);
     padding: 6px 8px;
     border-radius: 3px;
 }
@@ -873,7 +896,7 @@ body.zoomed-out.is-dragging #app-viewport {
     display: flex;
     justify-content: space-between;
     font-size: 9px;
-    color: rgba(255,255,255,0.4);
+    color: rgba(255, 255, 255, 0.4);
 }
 
 .spc-repo-lang {
@@ -901,20 +924,28 @@ body.zoomed-out.is-dragging #app-viewport {
     font-size: 11px;
 }
 
-.spc-lc-breakdown-col > div {
+.spc-lc-breakdown-col>div {
     display: flex;
     justify-content: space-between;
     width: 90px;
 }
 
-.spc-lc-easy  { color: #7ecb6e; }
-.spc-lc-med   { color: rgba(196, 181, 80, 0.9); }
-.spc-lc-hard  { color: rgba(220, 80, 80, 0.85); }
+.spc-lc-easy {
+    color: #7ecb6e;
+}
+
+.spc-lc-med {
+    color: rgba(196, 181, 80, 0.9);
+}
+
+.spc-lc-hard {
+    color: rgba(220, 80, 80, 0.85);
+}
 
 .spc-lc-total-solved {
     margin-top: 4px;
     padding-top: 4px;
-    border-top: 1px solid rgba(255,255,255,0.1);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
     color: #c0bfa0;
 }
 
@@ -924,6 +955,7 @@ body.zoomed-out.is-dragging #app-viewport {
 .social-preview-card--li {
     padding: 0;
 }
+
 .social-preview-card--li::after {
     margin-top: 0;
     padding: 5px 8px;
@@ -945,18 +977,21 @@ body.zoomed-out.is-dragging #app-viewport {
     margin-bottom: 4px;
     padding: 10px 10px 0;
 }
+
 .spc-li-headline {
     color: rgba(100, 160, 210, 0.9);
     font-size: 11px;
     margin-bottom: 4px;
     padding: 0 10px;
 }
+
 .spc-li-sub {
     color: rgba(192, 191, 160, 0.55);
     font-size: 10px;
     margin-bottom: 4px;
     padding: 0 10px;
 }
+
 .spc-li-note {
     color: rgba(192, 191, 160, 0.38);
     font-size: 9px;
@@ -969,6 +1004,22 @@ body.zoomed-out.is-dragging #app-viewport {
 
 .spraypaint-preview-image {
     background-color: #1a1c22;
+}
+
+.filter-orange {
+    filter: sepia(1) saturate(4) hue-rotate(340deg);
+}
+
+.filter-yellow {
+    filter: sepia(1) saturate(4) hue-rotate(10deg);
+}
+
+.filter-ltblue {
+    filter: sepia(1) saturate(3) hue-rotate(180deg);
+}
+
+.filter-green {
+    filter: sepia(1) saturate(4) hue-rotate(90deg);
 }
 
 /* ── Project Preview Cards ───────────────────────────────────────────────── */
@@ -1048,6 +1099,6 @@ body.zoomed-out.is-dragging #app-viewport {
     padding: 3px 7px;
     font-size: 10px;
     border-radius: 2px;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 2px 2px rgba(0,0,0,0.4);
-    text-shadow: 1px 1px 0px rgba(0,0,0,0.8);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 2px 2px rgba(0, 0, 0, 0.4);
+    text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.8);
 }
