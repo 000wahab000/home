@@ -114,14 +114,12 @@
                                     <div class="spraypaint-section">
                                         <label>Spraypaint image</label>
                                         <div class="spraypaint-preview">
-                                            <div class="spraypaint-preview-image" id="spraypaint-preview"></div>
                                             <div class="spraypaint-selectors">
                                                 <div class="spraypaint-selector-row">
                                                     <select id="spraypaint-image" class="cs-select">
-                                                        <option value="lambda" selected>lambda</option>
-                                                        <option value="smiley">smiley</option>
-                                                        <option value="heart">heart</option>
-                                                        <option value="kid">kid</option>
+                                                        <option value="buzzcut" selected>buzzcut</option>
+                                                        <option value="does_the_hat">does the hat</option>
+                                                        <option value="misty">misty</option>
                                                     </select>
                                                 </div>
                                                 <div class="spraypaint-selector-row">
@@ -380,6 +378,23 @@
             <div class="node-body"></div>
         </div>
 
+        <!-- CHILD NODES: Options — Social Previews -->
+        <div class="node child-node" id="node-opt-gh" data-dialog="options-dialog" data-part="gh-preview"
+            data-parent="node-opt-bio">
+            <div class="node-bar">GitHub</div>
+            <div class="node-body"></div>
+        </div>
+        <div class="node child-node" id="node-opt-lc" data-dialog="options-dialog" data-part="lc-preview"
+            data-parent="node-opt-bio">
+            <div class="node-bar">LeetCode</div>
+            <div class="node-body"></div>
+        </div>
+        <div class="node child-node" id="node-opt-li" data-dialog="options-dialog" data-part="li-preview"
+            data-parent="node-opt-bio">
+            <div class="node-bar">LinkedIn</div>
+            <div class="node-body"></div>
+        </div>
+
         <!-- CHILD NODES: Quit -->
         <div class="node child-node" id="node-quit-msg" data-dialog="quit-dialog" data-part="msg"
             data-parent="hub-quit">
@@ -411,6 +426,47 @@
         <div class="node child-node" id="node-srv-acts" data-dialog="servers-dialog" data-part="actions"
             data-parent="hub-srv">
             <div class="node-bar">Actions</div>
+            <div class="node-body"></div>
+        </div>
+        <!-- CHILD NODES: Servers — Projects -->
+        <div class="node child-node" id="node-srv-askves" data-dialog="servers-dialog" data-part="project"
+            data-project="askves" data-parent="hub-srv">
+            <div class="node-bar">AskVES</div>
+            <div class="node-body"></div>
+        </div>
+        <div class="node child-node" id="node-srv-tatkal" data-dialog="servers-dialog" data-part="project"
+            data-project="tatkal" data-parent="hub-srv">
+            <div class="node-bar">Smart Tatkal</div>
+            <div class="node-body"></div>
+        </div>
+        <div class="node child-node" id="node-srv-studysync" data-dialog="servers-dialog" data-part="project"
+            data-project="studysync" data-parent="hub-srv">
+            <div class="node-bar">StudySync</div>
+            <div class="node-body"></div>
+        </div>
+        <div class="node child-node" id="node-srv-autopilot" data-dialog="servers-dialog" data-part="project"
+            data-project="autopilot" data-parent="hub-srv">
+            <div class="node-bar">Autopilot Planner</div>
+            <div class="node-body"></div>
+        </div>
+        <div class="node child-node" id="node-srv-gpt2" data-dialog="servers-dialog" data-part="project"
+            data-project="gpt2" data-parent="hub-srv">
+            <div class="node-bar">GPT-2 Fine-Tune</div>
+            <div class="node-body"></div>
+        </div>
+        <div class="node child-node" id="node-srv-hand" data-dialog="servers-dialog" data-part="project"
+            data-project="hand" data-parent="hub-srv">
+            <div class="node-bar">Hand Tracking</div>
+            <div class="node-body"></div>
+        </div>
+        <div class="node child-node" id="node-srv-java" data-dialog="servers-dialog" data-part="project"
+            data-project="java" data-parent="hub-srv">
+            <div class="node-bar">Java Paint</div>
+            <div class="node-body"></div>
+        </div>
+        <div class="node child-node" id="node-srv-stackrx" data-dialog="servers-dialog" data-part="project"
+            data-project="stackrx" data-parent="hub-srv">
+            <div class="node-bar">StackRx</div>
             <div class="node-body"></div>
         </div>
     </div>

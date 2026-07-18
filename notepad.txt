@@ -1,0 +1,60 @@
+MODEL SKILLS, BEHAVIOUR, AND DECISIONS NOTEPAD
+===============================================
+
+[Certain] Key Decisions to Maintain:
+1. Dynamic JS-controlled state loop (panX, panY, currentScale) instead of CSS class toggles.
+2. Independent background grid via a separate #grid-canvas layer to avoid layout issues.
+3. DOM-level runtime cloning (cloneNode) for graph nodes to dynamically replicate active UI dialogs at 55% scale.
+4. DO NOT duplicate content in HTML. All sub-panel content is extracted from live dialogs in JS via data-part attribute.
+5. Wire drawing is fully dynamic: nearest port pair calculated every frame. No cached wire paths.
+6. NEVER use external libraries. Vanilla JS only.
+
+[Certain] Behaviour Rules:
+1. Do not introduce unsolicited structural/visual refactors of the Counter-Strike menu or original theme elements.
+2. Solve layout/rendering bugs through coordinate remapping and container layering, not by stripping features.
+3. ALWAYS explain the plan first, wait for confirmation, THEN code.
+4. Ask targeted questions when the scope of a feature is ambiguous before touching any file.
+
+[Certain] Architecture Design Rules:
+1. index.html holds ONLY shell node divs with data-dialog and data-part attributes. No content inside node-body.
+2. script.js injectDialogClone() extracts DOM subtrees from cloned dialogs via data-part attribute.
+3. flyOutNodes() uses hardcoded hubTargets dict + dynamic stacking cursor for child positions.
+4. drawWires() is stateless — rebuilt every drag event and on mode entry.
+5. The #nodes-layer shares the exact same CSS transform as #app-viewport. Local coordinates are unified.
+6. Asset browser (#asset-browser) is built entirely at runtime via buildAssetBrowser(). No static HTML content inside it.
+
+[Certain] Tree Hierarchy Architecture (IMPLEMENTED):
+- ROOT: Main CS portfolio site (viewport).
+- LEVEL 1 — 4 HUB NODES: hub-ng, hub-opt, hub-quit, hub-srv.
+  Gold bezier wires (rgba(196,181,80,0.85)) from nearest viewport edge port to nearest hub port.
+- LEVEL 2 — 14 CHILD NODES: sub-panels sliced from their parent hub's CS dialog.
+  Steel-blue bezier wires (rgba(100,160,210,0.75)) from nearest hub port to nearest child port.
+- Wire routing: smooth cubic Bezier. Tangent derived from port direction. No orthogonal routing.
+- The original Servers DIALOG popup must NEVER be deleted or altered.
+
+[Certain] Node Selection System (IMPLEMENTED):
+- Single click selects one node at a time. Clicking same node deselects. Clicking another swaps.
+- Selection shows: scale(1.06) + 4px left-border accent in hub-family color. No title-bar fill.
+- Dragging a node (mouse moves > 5px) does NOT trigger selection.
+- Double-click opens the parent CS dialog (unchanged).
+- Hub accent colors: hub-ng=#1a8080 (teal), hub-opt=#993333 (red), hub-quit=#2d7a40 (green), hub-srv=#7a6e1a (yellow).
+- Children inherit their parent hub accent color.
+
+[Certain] Asset Browser Panel (IMPLEMENTED):
+- Fixed sidebar on the right edge (position: fixed, width: 220px).
+- Visible ONLY during Workings Mode. Opens after flyOutNodes lands. Closes on exitWorkingsMode.
+- Full tree: 4 hub sections (collapsible) with their 14 child nodes listed beneath.
+- Clicking a row: selects that node AND pans canvas to center on it.
+- Search bar filters tree items live. Collapsed sections auto-expand on search match.
+- Color-coded by hub accent color (3px vertical dot per hub, 4px circle dot per child).
+
+[Certain] Sub-Panel Split Plan (14 child nodes total):
+CREATE SERVER (3):  node-ng-map, node-ng-info, node-ng-actions
+OPTIONS (5):        node-opt-name, node-opt-spray, node-opt-bio, node-opt-details, node-opt-actions
+CONFIRM/QUIT (2):   node-quit-msg, node-quit-acts
+SERVERS (4):        node-srv-live, node-srv-done, node-srv-wip, node-srv-acts
+
+[Certain] Child Node Stacking Layout:
+- Left hubs (hub-ng, hub-quit): vertical column to LEFT, 20px gap between edges, 30px stub from hub.
+- Right hub (hub-opt): vertical column to RIGHT, 20px gap, 30px stub.
+- Bottom hub (hub-srv): horizontal row BELOW, centered under hub midpoint, 40px gap, 30px stub.

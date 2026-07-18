@@ -2,42 +2,8 @@ function initOptionsDialog() {
     const dialog = document.getElementById('options-dialog');
     if (!dialog) return null;
 
-    const spraypaintImages = {
-        'lambda': 'images/me1.jpg',
-        'smiley': 'images/me2.jpg',
-        'heart': 'images/me3.jpg',
-        'kid': 'images/me4.jpg',
-    };
-
-    const spraypaintPreview = dialog.querySelector('#spraypaint-preview');
-    const spraypaintImageSelector = dialog.querySelector('#spraypaint-image');
-    const spraypaintFilterSelector = dialog.querySelector('#spraypaint-filter');
-
-    function updateSpraypaintPreview() {
-        const selectedImagePath = spraypaintImages[spraypaintImageSelector.value];
-        const selectedFilter = spraypaintFilterSelector.value;
-
-        spraypaintPreview.classList.remove('filter-orange', 'filter-yellow', 'filter-green', 'filter-ltblue');
-
-        if (selectedImagePath) {
-            spraypaintPreview.style.backgroundImage = `url('${selectedImagePath}')`;
-        }
-
-        if (selectedFilter && selectedFilter !== 'none') {
-            spraypaintPreview.classList.add(`filter-${selectedFilter}`);
-        }
-    }
-
-    updateSpraypaintPreview();
-
-    spraypaintImageSelector.addEventListener('change', updateSpraypaintPreview);
-    spraypaintFilterSelector.addEventListener('change', updateSpraypaintPreview);
-
-    const chickenSound = new Audio('sounds/chicken.wav');
-    spraypaintPreview.addEventListener('click', function () {
-        chickenSound.currentTime = 0;
-        chickenSound.play();
-    })
+    // Spraypaint selectors now track mode name / filter only — no image preview.
+    // (The image preview div has been removed from the HTML.)
 
     dialog.querySelector('#options-ok').addEventListener('click', function () {
         dialog.close();
@@ -157,6 +123,65 @@ function initServersDialog() {
     });
 
     return dialog;
+}
+
+// ── Calendar grid renderer ─────────────────────────────────────────────────────────
+// contributions: [{ date:'YYYY-MM-DD', count:N, level:0-4 }]
+// scheme: 'gh' (gold tones) | 'lc' (steel-blue tones)
+function renderCalendarGrid(contributions, scheme) {
+    var grid = document.createElement('div');
+    grid.className = 'contrib-grid';
+
+    var days = contributions.slice(-7 * 26); // last 26 weeks
+
+    // Pad so column 0 starts on Sunday
+    var firstDate = new Date(days[0].date + 'T00:00:00');
+    var padded = [];
+    for (var p = 0; p < firstDate.getDay(); p++) padded.push(null);
+    padded = padded.concat(days);
+
+    for (var j = 0; j < padded.length; j += 7) {
+        var week = padded.slice(j, j + 7);
+        var col = document.createElement('div');
+        col.className = 'contrib-week';
+        week.forEach(function (day) {
+            var cell = document.createElement('div');
+            cell.className = 'contrib-day ' + scheme + '-level-' + (day ? day.level : 0);
+            if (day && day.count > 0) cell.title = day.date + ': ' + day.count;
+            col.appendChild(cell);
+        });
+        grid.appendChild(col);
+    }
+    return grid;
+}
+
+// ── LeetCode SVG donut chart ───────────────────────────────────────────────────
+function buildDonutSVG(easy, med, hard) {
+    var total = (easy + med + hard) || 1;
+    var s = 88, cx = s / 2, cy = s / 2, r = 33, sw = 10;
+    var circ = 2 * Math.PI * r;
+    function arc(frac, color, offset) {
+        var dash = (frac * circ).toFixed(2) + ' ' + circ.toFixed(2);
+        return '<circle cx="' + cx + '" cy="' + cy + '" r="' + r +
+            '" fill="none" stroke="' + color + '" stroke-width="' + sw +
+            '" stroke-dasharray="' + dash +
+            '" stroke-dashoffset="' + (-offset).toFixed(2) +
+            '" transform="rotate(-90 ' + cx + ' ' + cy + ')" />';
+    }
+    var eP = easy / total, mP = med / total, hP = hard / total;
+    return '<svg width="' + s + '" height="' + s +
+        '" viewBox="0 0 ' + s + ' ' + s + '" class="lc-donut">' +
+        '<circle cx="' + cx + '" cy="' + cy + '" r="' + r +
+        '" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="' + sw + '"/>' +
+        arc(eP, '#7ecb6e', 0) +
+        arc(mP, 'rgba(196,181,80,0.9)', eP * circ) +
+        arc(hP, 'rgba(220,80,80,0.85)', (eP + mP) * circ) +
+        '<text x="' + cx + '" y="' + (cy + 1) +
+        '" text-anchor="middle" dominant-baseline="middle"' +
+        ' fill="#c0bfa0" font-size="13" font-weight="bold">' + (easy + med + hard) + '</text>' +
+        '<text x="' + cx + '" y="' + (cy + 15) +
+        '" text-anchor="middle" fill="rgba(255,255,255,0.35)" font-size="8">solved</text>' +
+        '</svg>';
 }
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -328,7 +353,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ── Scroll wheel zoom ────────────────────────────────────────────────────
     // Zoom toward wherever the mouse cursor is sitting.
-    viewport.addEventListener('wheel', function (e) {
+    // Attached to document so it fires over the grid canvas and node panels too.
+    document.addEventListener('wheel', function (e) {
         if (!isWorkingsMode) return;
         e.preventDefault();
 
@@ -336,8 +362,8 @@ document.addEventListener('DOMContentLoaded', function () {
         var factor = e.deltaY > 0 ? 0.92 : 1.08;
         var newScale = currentScale * factor;
 
-        // Cap: can never zoom in past the initial zoomed-out scale
-        if (newScale > INITIAL_SCALE) newScale = INITIAL_SCALE;
+        // Cap: zoom-out floor is arbitrary small, zoom-in ceiling is 1.5 (150% — lets you inspect nodes up close)
+        if (newScale > 1.5) newScale = 1.5;
 
         // Zoom toward the cursor position.
         // mouseX/Y are measured from the screen center (where the viewport is anchored).
@@ -542,6 +568,214 @@ document.addEventListener('DOMContentLoaded', function () {
             drawWire(pair.a.x, pair.a.y, pair.a.dir, pair.b.x, pair.b.y, pair.b.dir, 'rgba(100,160,210,0.75)');
         });
     }
+    // ── Social preview card injector ───────────────────────────────────────────────
+    // GitHub: live calendar + top repos.  LeetCode: SVG donut + calendar.
+    // LinkedIn: screenshot image with text fallback.
+    var SOCIAL_URLS = {
+        'gh-preview': 'https://github.com/000wahab000',
+        'lc-preview': 'https://leetcode.com/u/wahab_shaikjh/',
+        'li-preview': 'https://www.linkedin.com/in/wahabshafishaikh/'
+    };
+
+    function injectSocialPreview(node, part) {
+        var body = node.querySelector('.node-body');
+        body.innerHTML = '';
+        var card = document.createElement('div');
+        card.className = 'social-preview-card social-preview-card--' + part.replace('-preview', '');
+
+        // ── GitHub ────────────────────────────────────────────────────
+        if (part === 'gh-preview') {
+            card.innerHTML = '<div class="spc-loading">⏳ Loading GitHub…</div>';
+            body.appendChild(card);
+            node.style.width = '360px';
+            body.style.minHeight = '120px';
+
+            Promise.all([
+                fetch('https://api.github.com/users/000wahab000').then(function (r) { return r.json(); }),
+                fetch('https://github-contributions-api.jogruber.de/v4/000wahab000?y=last')
+                    .then(function (r) { return r.json(); }).catch(function () { return null; }),
+                fetch('https://api.github.com/users/000wahab000/repos?sort=stars&per_page=4')
+                    .then(function (r) { return r.json(); }).catch(function () { return []; })
+            ]).then(function (results) {
+                var profile = results[0], contribData = results[1], repos = results[2];
+
+                card.innerHTML =
+                    '<div class="spc-header">' +
+                    '<img class="spc-avatar" src="' + profile.avatar_url + '" alt="avatar">' +
+                    '<div class="spc-info">' +
+                    '<div class="spc-name">' + (profile.name || profile.login) + '</div>' +
+                    '<div class="spc-handle">@' + profile.login + '</div>' +
+                    (profile.bio ? '<div class="spc-bio-inline">' + profile.bio + '</div>' : '') +
+                    '</div>' +
+                    '</div>' +
+                    '<div class="spc-stats">' +
+                    '<span class="spc-stat"><b>' + profile.followers + '</b> followers</span>' +
+                    '<span class="spc-stat"><b>' + profile.following + '</b> following</span>' +
+                    '<span class="spc-stat"><b>' + profile.public_repos + '</b> repos</span>' +
+                    '</div>';
+
+                if (contribData && contribData.contributions) {
+                    var totalC = contribData.contributions.reduce(function (s, d) { return s + d.count; }, 0);
+                    var calLabel = document.createElement('div');
+                    calLabel.className = 'spc-section-label';
+                    calLabel.textContent = totalC + ' contributions in the last year';
+                    card.appendChild(calLabel);
+                    card.appendChild(renderCalendarGrid(contribData.contributions, 'gh'));
+                }
+
+                if (repos && repos.length) {
+                    var repoLabel = document.createElement('div');
+                    repoLabel.className = 'spc-section-label';
+                    repoLabel.textContent = 'Top repositories';
+                    card.appendChild(repoLabel);
+                    var repoGrid = document.createElement('div');
+                    repoGrid.className = 'spc-repos-grid';
+                    repos.forEach(function (repo) {
+                        var item = document.createElement('div');
+                        item.className = 'spc-repo-item';
+                        item.innerHTML =
+                            '<div class="spc-repo-name">' + repo.name + '</div>' +
+                            '<div class="spc-repo-meta">' +
+                            (repo.language ? '<span class="spc-repo-lang">' + repo.language + '</span>' : '') +
+                            '<span class="spc-repo-stars">★ ' + (repo.stargazers_count || 0) + '</span>' +
+                            '</div>';
+                        repoGrid.appendChild(item);
+                    });
+                    card.appendChild(repoGrid);
+                }
+
+                body.style.minHeight = '';
+            }).catch(function () {
+                card.innerHTML = '<div class="spc-error">GitHub unreachable</div>';
+            });
+
+            // ── LeetCode ─────────────────────────────────────────────────
+        } else if (part === 'lc-preview') {
+            card.innerHTML = '<div class="spc-loading">⏳ Loading LeetCode…<br><span class="spc-loading-sub">may take ~30s on first load</span></div>';
+            body.appendChild(card);
+            node.style.width = '330px';
+            body.style.minHeight = '120px';
+
+            Promise.all([
+                fetch('https://leetcode-api-faisalshohag.vercel.app/wahab_shaikjh').then(function (r) { return r.json(); }),
+                fetch('https://alfa-leetcode-api.onrender.com/wahab_shaikjh')
+                    .then(function (r) { return r.json(); }).catch(function () { return null; })
+            ]).then(function (results) {
+                var stats = results[0], alfa = results[1];
+                var avatarUrl = alfa && alfa.avatar ? alfa.avatar : '';
+                var bio = alfa && alfa.aboutMe ? alfa.aboutMe : '';
+
+                card.innerHTML =
+                    '<div class="spc-header">' +
+                    (avatarUrl ? '<img class="spc-avatar" src="' + avatarUrl + '" alt="avatar">' : '') +
+                    '<div class="spc-info">' +
+                    '<div class="spc-name">wahab_shaikjh</div>' +
+                    '<div class="spc-handle">Rank #' + (stats.ranking || '—') + '</div>' +
+                    (bio ? '<div class="spc-bio-inline">' + bio + '</div>' : '') +
+                    '</div>' +
+                    '</div>' +
+                    '<div class="spc-stats">' +
+                    '<span class="spc-stat"><b>' + (stats.totalSolved || 0) + '</b> solved</span>' +
+                    '<span class="spc-stat">Rating <b>' + (alfa && alfa.contestRating ? Math.round(alfa.contestRating) : '—') + '</b></span>' +
+                    '</div>';
+
+                var donutRow = document.createElement('div');
+                donutRow.className = 'spc-lc-donut-row';
+                donutRow.innerHTML = buildDonutSVG(stats.easySolved || 0, stats.mediumSolved || 0, stats.hardSolved || 0);
+                var breakdown = document.createElement('div');
+                breakdown.className = 'spc-lc-breakdown-col';
+                breakdown.innerHTML =
+                    '<div class="spc-lc-easy">Easy  <b>' + (stats.easySolved || 0) + '</b></div>' +
+                    '<div class="spc-lc-med">Med   <b>' + (stats.mediumSolved || 0) + '</b></div>' +
+                    '<div class="spc-lc-hard">Hard  <b>' + (stats.hardSolved || 0) + '</b></div>' +
+                    '<div class="spc-lc-total-solved"><b>' + (stats.totalSolved || 0) + '</b> total</div>';
+                donutRow.appendChild(breakdown);
+                card.appendChild(donutRow);
+
+                if (alfa && alfa.submissionCalendar) {
+                    var calLabel = document.createElement('div');
+                    calLabel.className = 'spc-section-label';
+                    calLabel.textContent = 'Submission activity';
+                    card.appendChild(calLabel);
+                    var calData = typeof alfa.submissionCalendar === 'string'
+                        ? JSON.parse(alfa.submissionCalendar) : alfa.submissionCalendar;
+                    var contributions = Object.keys(calData).map(function (ts) {
+                        var count = calData[ts];
+                        var date = new Date(parseInt(ts) * 1000);
+                        return {
+                            date: date.toISOString().split('T')[0],
+                            count: count,
+                            level: count === 0 ? 0 : count < 3 ? 1 : count < 6 ? 2 : count < 10 ? 3 : 4
+                        };
+                    }).sort(function (a, b) { return a.date.localeCompare(b.date); });
+                    card.appendChild(renderCalendarGrid(contributions, 'lc'));
+                }
+
+                body.style.minHeight = '';
+            }).catch(function () {
+                card.innerHTML = '<div class="spc-error">LeetCode unreachable</div>';
+            });
+
+            // ── LinkedIn ────────────────────────────────────────────────
+        } else if (part === 'li-preview') {
+            var img = document.createElement('img');
+            img.className = 'spc-li-img';
+            img.src = 'images/linkedin.png';
+            img.alt = 'LinkedIn — Wahab Shafi Shaikh';
+            img.onerror = function () {
+                // Fallback text card if screenshot file is not yet placed
+                card.innerHTML =
+                    '<div class="spc-li-name">Wahab Shafi Shaikh</div>' +
+                    '<div class="spc-li-headline">Upcoming Sophomore at VESIT | ML | AI | Build In Public</div>' +
+                    '<div class="spc-li-sub">264 connections · Mumbai, India</div>' +
+                    '<div class="spc-li-note">Open to opportunities</div>';
+            };
+            card.appendChild(img);
+            body.appendChild(card);
+            node.style.width = '320px';
+        }
+    }
+
+    // ── Project Preview Injector ──────────────────────────────────────────────
+    var PROJECT_DATA = {
+        'askves': { name: 'AskVES', stack: ['Python', 'Flask', 'Gemini API'], status: 'pending', url: 'https://github.com/000wahab000/AskVes' },
+        'tatkal': { name: 'Smart Tatkal', stack: ['FastAPI', 'React', 'Python'], status: 'pending', url: 'https://github.com/000wahab000/SmartTatkal' },
+        'studysync': { name: 'StudySync', stack: ['JS', 'Flask', 'Firebase'], status: 'pending', url: 'https://github.com/000wahab000/StudySync' },
+        'autopilot': { name: 'Autopilot Planner', stack: ['Python', 'Flask', 'Gemini API'], status: 'pending', url: 'https://github.com/000wahab000/AutoPilotPlanner' },
+        'gpt2': { name: 'GPT-2 Fine-Tune', stack: ['Python', 'PyTorch', 'HuggingFace'], status: 'complete', url: 'https://github.com/000wahab000/fine_tuning_gpt_2' },
+        'hand': { name: 'Hand Tracking', stack: ['Python', 'OpenCV'], status: 'complete', url: 'https://github.com/000wahab000/AI_Hand_Tracking' },
+        'java': { name: 'Java Paint', stack: ['Java', 'Swing'], status: 'complete', url: 'https://github.com/000wahab000/Java-Paint' },
+        'stackrx': { name: 'StackRx', stack: ['React'], status: 'wip', url: 'https://github.com/000wahab000/StackRx' }
+    };
+
+    function injectProjectPreview(node) {
+        var projectId = node.getAttribute('data-project');
+        var data = PROJECT_DATA[projectId];
+        if (!data) return;
+
+        // Add URL to SOCIAL_URLS so dblclick opens GitHub
+        SOCIAL_URLS['project-' + projectId] = data.url;
+        node.setAttribute('data-part', 'project-' + projectId);
+
+        var body = node.querySelector('.node-body');
+        body.innerHTML = '';
+
+        var card = document.createElement('div');
+        card.className = 'project-preview-card';
+
+        var statusLabels = { 'pending': 'DEPLOY PENDING', 'complete': 'COMPLETE', 'wip': 'WIP' };
+        var stackHtml = data.stack.map(function (s) { return '<span class="ppc-stack-chip">' + s + '</span>'; }).join('');
+
+        card.innerHTML =
+            '<div class="ppc-header">' +
+            '<div class="ppc-name">' + data.name + '</div>' +
+            '<div class="ppc-status ppc-status--' + data.status + '">' + statusLabels[data.status] + '</div>' +
+            '</div>' +
+            '<div class="ppc-stack">' + stackHtml + '</div>';
+
+        body.appendChild(card);
+        node.style.width = '240px';
+    }
 
     // ── Clone injector ────────────────────────────────────────────────────────
     function injectDialogClone(node) {
@@ -551,6 +785,18 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!dialog) return;
 
         var SCALE = 0.7;
+
+        // SOCIAL PREVIEW NODES — built from live APIs, not from dialog clones
+        if (part === 'gh-preview' || part === 'lc-preview' || part === 'li-preview') {
+            injectSocialPreview(node, part);
+            return;
+        }
+
+        // PROJECT NODES — built from JSON map
+        if (part === 'project') {
+            injectProjectPreview(node);
+            return;
+        }
 
         if (!part) {
             // HUB NODE: full dialog clone
@@ -725,25 +971,56 @@ document.addEventListener('DOMContentLoaded', function () {
 
             } else {
                 // 'bottom' (hub-srv): center children horizontally under the hub
-                // with extra spacing since server nodes are the widest
-                var SRV_GAP = 40;  // larger gap for server children
+                // Wrap into multiple rows if there are many children (e.g. max 3 per row)
+                var MAX_PER_ROW = 3;
+                var SRV_GAP = 60;
+                var ROW_GAP = 60;
 
-                // Pre-compute total row width to center it under the hub
-                var totalW = 0;
-                kids.forEach(function (child) {
-                    totalW += (child.offsetWidth || 150);
+                var rows = [];
+                for (var i = 0; i < kids.length; i += MAX_PER_ROW) {
+                    rows.push(kids.slice(i, i + MAX_PER_ROW));
+                }
+
+                var currentY = ht.y + hs.h + CHILD_STUB;
+
+                rows.forEach(function (rowKids) {
+                    var totalW = 0;
+                    rowKids.forEach(function (child) {
+                        totalW += (child.offsetWidth || 150);
+                    });
+                    totalW += SRV_GAP * (rowKids.length - 1);
+
+                    var cursorX = (ht.x + hs.w / 2) - totalW / 2;
+                    rowKids.forEach(function (child) {
+                        var cw = child.offsetWidth || 150;
+                        childTargets[child.id] = { x: cursorX, y: currentY };
+                        cursorX += cw + SRV_GAP;
+                    });
+
+                    // Assume all items in row are roughly same height, use the first one
+                    var rowH = rowKids[0].offsetHeight || 100;
+                    currentY += rowH + ROW_GAP;
                 });
-                totalW += SRV_GAP * (kids.length - 1);
+            }
+        });
 
-                // Start cursorX so the row is centered under the hub center
-                cursorX = (ht.x + hs.w / 2) - totalW / 2;
-                kids.forEach(function (child) {
-                    var cw = child.offsetWidth || 150;
-                    childTargets[child.id] = {
-                        x: cursorX,
-                        y: ht.y + hs.h + CHILD_STUB
+        // Position grandchildren (children of children, e.g. social nodes)
+        Object.keys(childTargets).forEach(function (cid) {
+            var grandKids = childGroups[cid];
+            if (grandKids && grandKids.length > 0) {
+                var ct = childTargets[cid];
+                var childEl = document.getElementById(cid);
+                var cw = childEl ? (childEl.offsetWidth || 150) : 150;
+
+                // Stack vertically to the right of the child node
+                var cursorY = ct.y;
+                grandKids.forEach(function (gKid) {
+                    var gch = gKid.offsetHeight || 100;
+                    childTargets[gKid.id] = {
+                        x: ct.x + cw + CHILD_STUB,
+                        y: cursorY
                     };
-                    cursorX += cw + SRV_GAP;
+                    cursorY += gch + CHILD_GAP;
                 });
             }
         });
@@ -776,14 +1053,21 @@ document.addEventListener('DOMContentLoaded', function () {
         var childNodes = Array.from(nodesLayer.querySelectorAll('.child-node'));
         childNodes.forEach(function (child, i) {
             var pid = child.getAttribute('data-parent');
-            var hubTgt = hubTargets[pid] || allCenter;
-            var tgt = childTargets[child.id] || hubTgt;
+            // Find the root hub origin (walk up from parent)
+            var hubOrigin = hubTargets[pid];
+            if (!hubOrigin) {
+                // grandchild — walk up one more level to find the hub
+                var parentEl = document.getElementById(pid);
+                var grandPid = parentEl ? parentEl.getAttribute('data-parent') : null;
+                hubOrigin = grandPid ? (hubTargets[grandPid] || allCenter) : allCenter;
+            }
+            var tgt = childTargets[child.id] || hubOrigin;
 
             setTimeout(function () {
                 // Snap to hub position first (invisible)
                 child.style.transition = 'none';
-                child.style.left = hubTgt.x + 'px';
-                child.style.top = hubTgt.y + 'px';
+                child.style.left = hubOrigin.x + 'px';
+                child.style.top = hubOrigin.y + 'px';
                 child.style.opacity = '0';
             }, hubDelay - 20);
 
@@ -811,17 +1095,23 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Accent colour for each hub; children inherit their parent hub's colour
     var HUB_COLORS = {
-        'hub-ng':   '#1a8080',   // dark teal          — Create Server
-        'hub-opt':  '#993333',   // dark red-teal       — Options
+        'hub-ng': '#1a8080',   // dark teal          — Create Server
+        'hub-opt': '#993333',   // dark red-teal       — Options
         'hub-quit': '#2d7a40',   // dark green-teal     — Quit / Confirm
-        'hub-srv':  '#7a6e1a'    // dark yellow-teal    — Servers
+        'hub-srv': '#7a6e1a'    // dark yellow-teal    — Servers
     };
 
     function getNodeAccent(node) {
         var id = node.id;
         if (HUB_COLORS[id]) return HUB_COLORS[id];
-        var parentId = node.getAttribute('data-parent');
-        return HUB_COLORS[parentId] || '#2db8b8';
+        // Walk up the data-parent chain until we find a hub colour
+        var currentId = node.getAttribute('data-parent');
+        while (currentId) {
+            if (HUB_COLORS[currentId]) return HUB_COLORS[currentId];
+            var parentEl = document.getElementById(currentId);
+            currentId = parentEl ? parentEl.getAttribute('data-parent') : null;
+        }
+        return '#2db8b8';
     }
 
     function clearSelection() {
@@ -853,14 +1143,19 @@ document.addEventListener('DOMContentLoaded', function () {
         draggingNode.style.transition = 'none';
         draggingNode.style.zIndex = selectedNode === draggingNode ? '20' : '10';
 
-        // Capture initial child positions if dragging a hub
+        // Capture initial child/grandchild positions if dragging a hub
         childDragOffsets = {};
         if (draggingNode.classList.contains('hub-node')) {
-            nodesLayer.querySelectorAll('.child-node[data-parent="' + draggingNode.id + '"]').forEach(function (child) {
-                var cp = nodePositions[child.id] || { x: 0, y: 0 };
-                childDragOffsets[child.id] = { x: cp.x - nox, y: cp.y - noy };
-                child.style.transition = 'none';
-            });
+            // Recursively collect all descendants
+            function collectDescendants(parentId) {
+                nodesLayer.querySelectorAll('.child-node[data-parent="' + parentId + '"]').forEach(function (desc) {
+                    var cp = nodePositions[desc.id] || { x: 0, y: 0 };
+                    childDragOffsets[desc.id] = { x: cp.x - nox, y: cp.y - noy };
+                    desc.style.transition = 'none';
+                    collectDescendants(desc.id);
+                });
+            }
+            collectDescendants(draggingNode.id);
         }
         e.stopPropagation();
     });
@@ -911,10 +1206,18 @@ document.addEventListener('DOMContentLoaded', function () {
         selectNode(node);
     });
 
-    // ── Double-click → open parent dialog ────────────────────────────────────
+    // ── Double-click → open parent dialog (or external URL for social nodes) ──
     nodesLayer.addEventListener('dblclick', function (e) {
         var node = e.target.closest('.node');
         if (!node) return;
+
+        // Social preview nodes navigate to the real profile page
+        var part = node.getAttribute('data-part');
+        if (SOCIAL_URLS[part]) {
+            window.open(SOCIAL_URLS[part], '_blank', 'noopener');
+            return;
+        }
+
         var dialog = document.getElementById(node.getAttribute('data-dialog'));
         if (dialog) openDialog(dialog);
     });
