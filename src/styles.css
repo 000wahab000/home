@@ -704,7 +704,7 @@ body.zoomed-out.is-dragging #app-viewport {
     padding: 10px 14px;
     font-size: 11px;
     color: #c0bfa0;
-    background: #1a1c22;
+    background: rgba(75, 85, 60, 0.95);
     cursor: default;
 }
 
@@ -1028,7 +1028,7 @@ body.zoomed-out.is-dragging #app-viewport {
     padding: 12px 14px 10px;
     font-size: 11px;
     color: #c0bfa0;
-    background: rgba(16, 18, 24, 0.97);
+    background: rgba(75, 85, 60, 0.95);
     cursor: default;
 }
 
@@ -1101,4 +1101,122 @@ body.zoomed-out.is-dragging #app-viewport {
     border-radius: 2px;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 2px 2px rgba(0, 0, 0, 0.4);
     text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.8);
+}
+
+/* ── Spotify Envelope+Disc Album Cards ───────────────────────────────────── */
+
+.spotify-card {
+    width: 120px;
+    background: rgba(75, 85, 60, 0.95);
+    cursor: pointer;
+    position: relative;
+    overflow: visible;
+    text-align: center;
+    padding-bottom: 8px;
+    border: 1px solid rgba(196, 181, 80, 0.15);
+    transition: border-color 0.15s;
+}
+.spotify-card:hover {
+    border-color: rgba(196, 181, 80, 0.4);
+}
+.spotify-card.playing {
+    border-color: rgba(196, 181, 80, 0.7);
+}
+
+/* Envelope top — darker strip with V-fold crease lines */
+.spotify-env-top {
+    height: 34px;
+    background: rgba(42, 52, 28, 0.97);
+    background-image:
+        linear-gradient(to bottom right, rgba(196, 181, 80, 0.09) 49%, transparent 50%),
+        linear-gradient(to bottom left,  rgba(196, 181, 80, 0.09) 49%, transparent 50%);
+    border-bottom: 1px solid rgba(196, 181, 80, 0.12);
+}
+
+/* Disc — shows only top half, peeking out of the envelope */
+.spotify-disc-wrap {
+    height: 38px;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    margin-top: -10px;
+}
+.spotify-disc {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: conic-gradient(
+        #0f0f18 0deg 50deg,
+        rgba(196, 181, 80, 0.75) 50deg 90deg,
+        #1a1a28 90deg 140deg,
+        rgba(90, 90, 90, 0.55) 140deg 180deg,
+        #0f0f18 180deg 230deg,
+        rgba(196, 181, 80, 0.6) 230deg 270deg,
+        #1a1a28 270deg 320deg,
+        rgba(90, 90, 90, 0.4) 320deg 360deg
+    );
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.5);
+    position: relative;
+    animation: spotify-disc-spin 4s linear infinite paused;
+}
+.spotify-disc::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: rgba(75, 85, 60, 0.97);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.spotify-card.playing .spotify-disc {
+    animation-play-state: running;
+}
+@keyframes spotify-disc-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
+.spotify-name {
+    font-size: 9px;
+    color: #c0bfa0;
+    font-weight: bold;
+    margin-top: 6px;
+    padding: 0 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.spotify-artist {
+    font-size: 8px;
+    color: rgba(192, 191, 160, 0.45);
+    padding: 0 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Popup — Spotify embed iframe, floats above the card */
+.spotify-popup {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 200;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/* Pending state message */
+.spotify-pending {
+    padding: 8px 12px;
+    background: rgba(42, 52, 28, 0.97);
+    font-size: 10px;
+    color: rgba(196, 181, 80, 0.7);
+    white-space: nowrap;
+    border-radius: 4px;
+    border: 1px solid rgba(196, 181, 80, 0.2);
 }

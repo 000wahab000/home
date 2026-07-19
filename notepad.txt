@@ -21,7 +21,7 @@ MODEL SKILLS, BEHAVIOUR, AND DECISIONS NOTEPAD
 3. flyOutNodes() uses hardcoded hubTargets dict + dynamic stacking cursor for child positions.
 4. drawWires() is stateless — rebuilt every drag event and on mode entry.
 5. The #nodes-layer shares the exact same CSS transform as #app-viewport. Local coordinates are unified.
-6. Asset browser (#asset-browser) is built entirely at runtime via buildAssetBrowser(). No static HTML content inside it.
+6. [PLANNED] Asset browser (#asset-browser) will be built entirely at runtime via buildAssetBrowser(). No static HTML content inside it.
 
 [Certain] Tree Hierarchy Architecture (IMPLEMENTED):
 - ROOT: Main CS portfolio site (viewport).
@@ -40,7 +40,7 @@ MODEL SKILLS, BEHAVIOUR, AND DECISIONS NOTEPAD
 - Hub accent colors: hub-ng=#1a8080 (teal), hub-opt=#993333 (red), hub-quit=#2d7a40 (green), hub-srv=#7a6e1a (yellow).
 - Children inherit their parent hub accent color.
 
-[Certain] Asset Browser Panel (IMPLEMENTED):
+[Certain] Asset Browser Panel (PLANNED / MISSING):
 - Fixed sidebar on the right edge (position: fixed, width: 220px).
 - Visible ONLY during Workings Mode. Opens after flyOutNodes lands. Closes on exitWorkingsMode.
 - Full tree: 4 hub sections (collapsible) with their 14 child nodes listed beneath.
@@ -58,3 +58,43 @@ SERVERS (4):        node-srv-live, node-srv-done, node-srv-wip, node-srv-acts
 - Left hubs (hub-ng, hub-quit): vertical column to LEFT, 20px gap between edges, 30px stub from hub.
 - Right hub (hub-opt): vertical column to RIGHT, 20px gap, 30px stub.
 - Bottom hub (hub-srv): horizontal row BELOW, centered under hub midpoint, 40px gap, 30px stub.
+
+[Certain] Contacts & Social Previews (IMPLEMENTED):
+- Social links (GitHub, LeetCode, LinkedIn) are integrated into the Options dialog (ASCII art).
+- During Workings Mode, they spawn as grandchildren nodes (node-opt-gh, node-opt-lc, node-opt-li) under node-opt-bio.
+- Double-clicking these social nodes opens their respective external URLs in a new tab.
+
+[Certain] Spotify Music Widget (IMPLEMENTED):
+- node-opt-music: new child of hub-opt (inserted between node-opt-spray and node-opt-bio).
+  data-part="music-section" → injectMusicSection() → renders small "♪ MUSIC" label node.
+- 14 album nodes are grandchildren of node-opt-music (data-parent="node-opt-music").
+  data-part="spotify" → injectSpotifyCard() routes them before the dialog null guard.
+- Visual: envelope-top div (darker strip, V-fold crease via CSS gradient) + half-visible
+  spinning vinyl disc peeking out below + album/artist text labels.
+- Click: opens Spotify embed iframe popup (position:absolute, bottom:100%, z-index:200).
+  Sets node+body overflow:visible to escape overflow:hidden clip. Disc spins while open.
+- Dblclick: opens Spotify album URL in new tab (via SOCIAL_URLS[partKey] pattern, same as projects).
+- SPOTIFY_ALBUMS dict in script.js is the single source of truth for all album data.
+  Add `id` field (Spotify album ID from share link) to enable embed playback.
+  Albums without id show "ID pending" message on click, Spotify search on dblclick.
+
+[Confirmed Spotify IDs]:
+- chromakopia: 4NRsGHlWBTl4rdLcq8CKcH (Tyler, the Creator)
+- mac:         0hvT3yIEysuuvkK73vgdcW  (Mac DeMarco - Rock & Roll Night Club)
+- mystery:     0U28P0QVB1QRxpqp5IHOlH  (artist/album TBD)
+- luvsic:      6dVIqQ8qmQ5GBnJ9shOYGE  (Nujabes - Luv(sic) Hexalogy)
+- gnx:         1I9TAJhnJucoNfu2KX8Hcg  (Kendrick Lamar - GNX)
+- bully:       4SZko61aMnmgvNhfhgTuD3  (Kanye West - BULLY)
+- graduation:  1cN1GECqXrHlPhLX7LGg3e  (Kanye West - Graduation)
+- okcomputer:  5vkqYmiPBYLaalcmjujWxK  (Radiohead - OK Computer)
+- inrainbows:  1ogfnXsQc3mf2BQAL9e9iJ  (Radiohead - In Rainbows)
+- grengjai:    33DzKnwuBE6lfOiADwzd5E  (Phum Viphurit - Greng Jai Piece, embedType:track)
+- snowfall:    5poA9SAx0Xiz1cf17fWBLS  (Øneheart - Snowfall)
+
+[Pending IDs - user to supply Spotify album links]:
+- letsstart (Lil Yachty - Let's Start Here.)
+- lsd (A$AP Rocky - At.Long.Last.A$AP)
+- brittle (Rare Americans - Brittle Bones Nicky)
+- tootime (The 1975 - TOOTIMETOOTIMETOOTIME)  ← NEW, added 2026-07-19
+
+

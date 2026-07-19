@@ -778,6 +778,25 @@ document.addEventListener('DOMContentLoaded', function () {
         'stackrx': { name: 'StackRx', stack: ['React'], status: 'wip', url: 'https://github.com/000wahab000/StackRx' }
     };
 
+    // ── Spotify Album data — add `id` once you have the Spotify album URL ────
+    var SPOTIFY_ALBUMS = {
+        'luvsic':      { name: 'Luv(sic) Hexalogy',    artist: 'Nujabes',             id: '6dVIqQ8qmQ5GBnJ9shOYGE' },
+        'gnx':         { name: 'GNX',                   artist: 'Kendrick Lamar',      id: '1I9TAJhnJucoNfu2KX8Hcg' },
+        'chromakopia': { name: 'Chromakopia',            artist: 'Tyler, the Creator',  id: '4NRsGHlWBTl4rdLcq8CKcH' },
+        'bully':       { name: 'BULLY',                  artist: 'Kanye West',          id: '4SZko61aMnmgvNhfhgTuD3' },
+        'graduation':  { name: 'Graduation',             artist: 'Kanye West',          id: '1cN1GECqXrHlPhLX7LGg3e' },
+        'okcomputer':  { name: 'OK Computer',            artist: 'Radiohead',           id: '5vkqYmiPBYLaalcmjujWxK' },
+        'inrainbows':  { name: 'In Rainbows',            artist: 'Radiohead',           id: '1ogfnXsQc3mf2BQAL9e9iJ' },
+        'letsstart':   { name: "Let's Start Here.",      artist: 'Lil Yachty',         id: '' },
+        'grengjai':    { name: 'The Greng Jai Piece',    artist: 'Phum Viphurit',       id: '33DzKnwuBE6lfOiADwzd5E', embedType: 'track' },
+        'snowfall':    { name: 'Snowfall',               artist: '\u00d8neheart',       id: '5poA9SAx0Xiz1cf17fWBLS' },
+        'lsd':         { name: 'At.Long.Last.A$AP',      artist: 'A$AP Rocky',          id: '' },
+        'mac':         { name: 'Rock & Roll Night Club', artist: 'Mac DeMarco',         id: '0hvT3yIEysuuvkK73vgdcW' },
+        'brittle':     { name: 'Brittle Bones Nicky',    artist: 'Rare Americans',      id: '' },
+        'mystery':     { name: '???',                    artist: '???',                 id: '0U28P0QVB1QRxpqp5IHOlH' },
+        'tootime':     { name: 'TOOTIMETOOTIMETOOTIME',  artist: 'The 1975',            id: '' }
+    };
+
     function injectProjectPreview(node) {
         var projectId = node.getAttribute('data-project');
         var data = PROJECT_DATA[projectId];
@@ -807,14 +826,116 @@ document.addEventListener('DOMContentLoaded', function () {
         node.style.width = '240px';
     }
 
+    // ── Music section header (node-opt-music) ────────────────────────────────
+    function injectMusicSection(node) {
+        var body = node.querySelector('.node-body');
+        var inner = document.createElement('div');
+        inner.className = 'node-part-inner';
+        inner.innerHTML = '<span style="color:rgba(196,181,80,0.7);font-size:10px;letter-spacing:1px;">&#9835; MUSIC<\/span>';
+        body.innerHTML = '';
+        body.appendChild(inner);
+        node.style.width = '80px';
+    }
+
+    // ── Spotify envelope+disc album card ─────────────────────────────────────
+    function injectSpotifyCard(node) {
+        var key = node.getAttribute('data-album');
+        var data = SPOTIFY_ALBUMS[key];
+        if (!data) return;
+
+        var body = node.querySelector('.node-body');
+        body.innerHTML = '';
+
+        // dblclick → open Spotify album (or search fallback)
+        var spotifyUrl = data.id
+            ? 'https://open.spotify.com/' + (data.embedType || 'album') + '/' + data.id
+            : 'https://open.spotify.com/search/' + encodeURIComponent((data.artist + ' ' + data.name).trim());
+        var partKey = 'spotify-' + key;
+        SOCIAL_URLS[partKey] = spotifyUrl;
+        node.setAttribute('data-part', partKey);
+
+        var card = document.createElement('div');
+        card.className = 'spotify-card';
+
+        // Envelope top
+        var envTop = document.createElement('div');
+        envTop.className = 'spotify-env-top';
+        card.appendChild(envTop);
+
+        // Half-visible disc
+        var discWrap = document.createElement('div');
+        discWrap.className = 'spotify-disc-wrap';
+        var disc = document.createElement('div');
+        disc.className = 'spotify-disc';
+        discWrap.appendChild(disc);
+        card.appendChild(discWrap);
+
+        var nameEl = document.createElement('div');
+        nameEl.className = 'spotify-name';
+        nameEl.textContent = data.name;
+        card.appendChild(nameEl);
+
+        var artistEl = document.createElement('div');
+        artistEl.className = 'spotify-artist';
+        artistEl.textContent = data.artist;
+        card.appendChild(artistEl);
+
+        var activePopup = null;
+
+        card.addEventListener('click', function (e) {
+            e.stopPropagation();
+            if (activePopup) {
+                activePopup.remove();
+                activePopup = null;
+                card.classList.remove('playing');
+                node.style.overflow = '';
+                body.style.overflow = '';
+                return;
+            }
+            var popup = document.createElement('div');
+            popup.className = 'spotify-popup';
+            if (data.id) {
+                var iframe = document.createElement('iframe');
+                iframe.src = 'https://open.spotify.com/embed/' + (data.embedType || 'album') + '/' + data.id + '?utm_source=generator&theme=0';
+                iframe.style.cssText = 'width:280px;height:152px;border:none;display:block;';
+                iframe.setAttribute('allow', 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture');
+                iframe.setAttribute('loading', 'lazy');
+                popup.appendChild(iframe);
+            } else {
+                popup.innerHTML = '<div class="spotify-pending">ID pending — dblclick to search Spotify<\/div>';
+            }
+            node.style.overflow = 'visible';
+            body.style.overflow = 'visible';
+            card.appendChild(popup);
+            activePopup = popup;
+            card.classList.add('playing');
+        });
+
+        body.appendChild(card);
+        node.style.width = '120px';
+    }
+
     // ── Clone injector ────────────────────────────────────────────────────────
     function injectDialogClone(node) {
         var dialogId = node.getAttribute('data-dialog');
         var part = node.getAttribute('data-part');   // null for hub nodes
+
+        // SPOTIFY MUSIC NODES — no dialog needed
+        if (part === 'spotify') {
+            injectSpotifyCard(node);
+            return;
+        }
+
         var dialog = document.getElementById(dialogId);
         if (!dialog) return;
 
         var SCALE = 0.7;
+
+        // MUSIC SECTION HEADER — has data-dialog but handled before cloning
+        if (part === 'music-section') {
+            injectMusicSection(node);
+            return;
+        }
 
         // SOCIAL PREVIEW NODES — built from live APIs, not from dialog clones
         if (part === 'gh-preview' || part === 'lc-preview' || part === 'li-preview') {
