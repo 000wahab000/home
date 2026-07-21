@@ -1156,21 +1156,45 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         // Position grandchildren (children of children, e.g. social nodes)
-        // Social nodes (GitHub/LeetCode/LinkedIn) under node-opt-bio go in a horizontal row
+        // Music album nodes → 4-column grid to the right of the social preview zone.
+        // Social nodes (gh/lc/li) → existing horizontal row below their parent.
         Object.keys(childTargets).forEach(function (cid) {
             var grandKids = childGroups[cid];
             if (!grandKids || grandKids.length === 0) return;
             var ct = childTargets[cid];
             var childEl = document.getElementById(cid);
             var ch = childEl ? (childEl.offsetHeight || 100) : 100;
+            var cw = childEl ? (childEl.offsetWidth || 80) : 80;
 
-            // Lay them out horizontally, below the parent node
+            // ── 4×4 GRID: music album nodes ─────────────────────────────────
+            if (cid === 'node-opt-music') {
+                var COLS   = 4;
+                var GAP_X  = 14;
+                var GAP_Y  = 14;
+                var CARD_W = 120; // fixed width set in injectSpotifyCard
+                // Social preview cards (gh/lc/li ~320px × 3) are centered around ct.x.
+                // Their right edge ≈ ct.x + cw/2 + 560. Add 40px buffer.
+                var startX = ct.x + cw / 2 + 600;
+                var startY = ct.y;
+                grandKids.forEach(function (gKid, i) {
+                    var col   = i % COLS;
+                    var row   = Math.floor(i / COLS);
+                    var cardH = gKid.offsetHeight || 110;
+                    childTargets[gKid.id] = {
+                        x: startX + col * (CARD_W + GAP_X),
+                        y: startY + row * (cardH  + GAP_Y)
+                    };
+                });
+                return;
+            }
+
+            // ── Default: single horizontal row below the parent ──────────────
             var HORIZ_GAP = 40;
             var totalW = 0;
             grandKids.forEach(function (gk) { totalW += (gk.offsetWidth || 320); });
             totalW += HORIZ_GAP * (grandKids.length - 1);
 
-            var cursorX = ct.x - (totalW / 2) + (childEl ? (childEl.offsetWidth || 150) / 2 : 75);
+            var cursorX = ct.x - (totalW / 2) + cw / 2;
             grandKids.forEach(function (gKid) {
                 var gkw = gKid.offsetWidth || 320;
                 childTargets[gKid.id] = {
@@ -1180,6 +1204,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 cursorX += gkw + HORIZ_GAP;
             });
         });
+
 
         var allCenter = { x: vw / 2 - 100, y: vh / 2 - 40 };
 
