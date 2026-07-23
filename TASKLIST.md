@@ -73,3 +73,15 @@ This document serves as the master tasklist and historical log for the project, 
   - [ ] Gather all certification images, PDFs, and verification links.
   - [ ] Create a new high-level parent node specifically labeled "Certifications".
   - [ ] Populate the cluster with stylized sub-nodes for each individual certificate, opening rich dialogs upon click.
+- [ ] **Tachiyomi Integration**
+  - [ ] Investigate Tachiyomi extension mechanics to parse and integrate manga reading/tracking into the portfolio.
+  - [ ] Build a dedicated node/UI to display live scraped content or personal reading lists.
+- [ ] **Live Projects Demo Showcase**
+  - [ ] Set up interactive environments or iframes for live project demonstrations.
+  - [ ] Link live demos seamlessly to their respective project nodes in the web.
+- [ ] **Spotify Widget Cleanup**
+  - [ ] Consolidate the currently disjointed Spotify integration into one clean, cohesive UI segment.
+  - [ ] Ensure the audio player scales correctly and matches the overall theme.
+- [ ] **Mobile Interface Overhaul**
+  - [ ] Debug and fix broken layouts and padding on mobile screens.
+  - [ ] Optimize the pan/zoom controls and touch targets specifically for mobile interactions.
