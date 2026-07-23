@@ -620,18 +620,21 @@ document.addEventListener('DOMContentLoaded', function () {
             node.style.width = '360px';
             body.style.minHeight = '120px';
 
-            Promise.all([
+            var cachedGh = sessionStorage.getItem('gh_stats');
+            var fetchPromiseGh = cachedGh ? Promise.resolve(JSON.parse(cachedGh)) : Promise.all([
                 fetch('https://api.github.com/users/000wahab000').then(function (r) { return r.json(); }),
                 fetch('https://github-contributions-api.jogruber.de/v4/000wahab000?y=last')
                     .then(function (r) { return r.json(); }).catch(function () { return null; }),
                 fetch('https://api.github.com/users/000wahab000/repos?sort=stars&per_page=4')
                     .then(function (r) { return r.json(); }).catch(function () { return []; })
-            ]).then(function (results) {
+            ]).then(function(res) { sessionStorage.setItem('gh_stats', JSON.stringify(res)); return res; });
+
+            fetchPromiseGh.then(function (results) {
                 var profile = results[0], contribData = results[1], repos = results[2];
 
                 card.innerHTML =
                     '<div class="spc-header">' +
-                    '<img class="spc-avatar" src="' + profile.avatar_url + '" alt="avatar">' +
+                    '<img class="spc-avatar" src="' + profile.avatar_url + '" alt="avatar" loading="lazy" width="64" height="64">' +
                     '<div class="spc-info">' +
                     '<div class="spc-name">' + (profile.name || profile.login) + '</div>' +
                     '<div class="spc-handle">@' + profile.login + '</div>' +
@@ -686,11 +689,14 @@ document.addEventListener('DOMContentLoaded', function () {
             node.style.width = '330px';
             body.style.minHeight = '120px';
 
-            Promise.all([
+            var cachedLc = sessionStorage.getItem('lc_stats');
+            var fetchPromiseLc = cachedLc ? Promise.resolve(JSON.parse(cachedLc)) : Promise.all([
                 fetch('https://leetcode-api-faisalshohag.vercel.app/wahab_shaikjh').then(function (r) { return r.json(); }),
                 fetch('https://alfa-leetcode-api.onrender.com/wahab_shaikjh')
                     .then(function (r) { return r.json(); }).catch(function () { return null; })
-            ]).then(function (results) {
+            ]).then(function(res) { sessionStorage.setItem('lc_stats', JSON.stringify(res)); return res; });
+
+            fetchPromiseLc.then(function (results) {
                 var stats = results[0], alfa = results[1];
                 var avatarUrl = alfa && alfa.avatar ? alfa.avatar : '';
                 var bio = alfa && alfa.aboutMe ? alfa.aboutMe : '';
@@ -752,6 +758,7 @@ document.addEventListener('DOMContentLoaded', function () {
             img.className = 'spc-li-img';
             img.src = 'images/linkedin.png';
             img.alt = 'LinkedIn — Wahab Shafi Shaikh';
+            img.loading = 'lazy';
             img.onerror = function () {
                 // Fallback text card if screenshot file is not yet placed
                 card.innerHTML =
