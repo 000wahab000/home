@@ -549,6 +549,143 @@ body.zoomed-out.is-dragging #app-viewport {
     }
 }
 
+/* ── Mobile-specific fixes (phones) ─────────────────────────────────────── */
+
+@media screen and (max-width: 480px) {
+    .menu {
+        margin-left: 6%;
+        margin-bottom: 12%;
+        width: auto;
+    }
+
+    .menu-item {
+        font-size: 26px;
+        margin: 8px 0;
+    }
+
+    /* Hide Workings mode on phones — node graph is unusable at that scale */
+    .menu-item[data-section="workings"] {
+        display: none;
+    }
+
+    /* Dialogs must never overflow the phone screen */
+    .cs-dialog {
+        transform: translate(-50%, -50%) scale(1) !important;
+        font-size: 17px !important;
+        max-height: 92dvh;
+        overflow-y: auto;
+    }
+
+    .cs-dialog.options-dialog,
+    .cs-dialog.new-game-dialog {
+        width: calc(100vw - 20px) !important;
+        max-width: 100vw !important;
+    }
+
+    .cs-dialog.servers-dialog {
+        width: calc(100vw - 12px) !important;
+        max-width: 100vw !important;
+    }
+
+    /* Servers table: collapse description on tiny screens */
+    .project-description-column {
+        display: none;
+    }
+
+    .project-stack-column {
+        flex: 2;
+    }
+
+    .server-browser {
+        height: 52dvh;
+    }
+
+    /* Options dialog inner layout */
+    .cs-dialog.options-dialog {
+        width: calc(100vw - 20px) !important;
+    }
+
+    .player-name-section,
+    .city-section {
+        width: 100%;
+    }
+
+    .spraypaint-section {
+        width: 100%;
+    }
+
+    .symbol-rectangle {
+        width: 100%;
+        overflow-x: auto;
+    }
+}
+
+/* ── Voice Recognition Button ────────────────────────────────────────────── */
+
+#voice-btn {
+    position: fixed;
+    bottom: 18px;
+    right: 18px;
+    z-index: 5000;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid rgba(196, 181, 80, 0.35);
+    background: rgba(17, 19, 24, 0.9);
+    color: rgba(196, 181, 80, 0.7);
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+
+#voice-btn:hover {
+    border-color: rgba(196, 181, 80, 0.65);
+    color: rgba(196, 181, 80, 1);
+}
+
+#voice-btn.listening {
+    border-color: rgba(220, 80, 80, 0.8);
+    color: rgba(220, 80, 80, 1);
+    animation: voice-pulse 1.2s ease-in-out infinite;
+}
+
+#voice-btn.no-support {
+    display: none;
+}
+
+@keyframes voice-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(220, 80, 80, 0); }
+    50%       { box-shadow: 0 0 0 8px rgba(220, 80, 80, 0.18); }
+}
+
+#voice-toast {
+    position: fixed;
+    bottom: 72px;
+    right: 18px;
+    z-index: 5000;
+    background: rgba(17, 19, 24, 0.95);
+    border: 1px solid rgba(196, 181, 80, 0.25);
+    color: rgba(196, 181, 80, 0.85);
+    font-size: 11px;
+    padding: 6px 12px;
+    border-radius: 3px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    white-space: nowrap;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+
+#voice-toast.show {
+    opacity: 1;
+}
+
 /* ── Node graph layer ───────────────────────────────────────────────────── */
 
 #nodes-layer {
@@ -1197,13 +1334,9 @@ body.zoomed-out.is-dragging #app-viewport {
     text-overflow: ellipsis;
 }
 
-/* Popup — Spotify embed iframe, floats above the card */
+/* Popup — Spotify embed iframe, floated above the card via JS (position:fixed) */
 .spotify-popup {
-    position: absolute;
-    bottom: calc(100% + 6px);
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 200;
+    z-index: 9000;
     border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 12px 48px rgba(0, 0, 0, 0.92);

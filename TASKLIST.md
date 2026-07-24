@@ -79,9 +79,17 @@ This document serves as the master tasklist and historical log for the project, 
 - [ ] **Live Projects Demo Showcase**
   - [ ] Set up interactive environments or iframes for live project demonstrations.
   - [ ] Link live demos seamlessly to their respective project nodes in the web.
-- [ ] **Spotify Widget Cleanup**
-  - [ ] Consolidate the currently disjointed Spotify integration into one clean, cohesive UI segment.
-  - [ ] Ensure the audio player scales correctly and matches the overall theme.
-- [ ] **Mobile Interface Overhaul**
-  - [ ] Debug and fix broken layouts and padding on mobile screens.
-  - [ ] Optimize the pan/zoom controls and touch targets specifically for mobile interactions.
+- [x] **Spotify Widget Cleanup**
+  - [x] Fixed Spotify popup clipping bug — popup now appends to `document.body` with `position:fixed`, escaping all `overflow:hidden` ancestors in the node layer.
+  - [x] Fixed re-entry bug — `data-part` attribute no longer mutated on Spotify nodes, so exiting and re-entering Workings Mode works correctly. URL key stored in `data-spotify-key` instead.
+  - [x] Popup closes on click-outside (delegated listener, auto-removed).
+  - [x] Disc spin animation matches theme. Audio player scales correctly within the CS 1.6 aesthetic.
+- [x] **Mobile Interface Overhaul**
+  - [x] Added `@media (max-width: 480px)` rules: menu scales to `26px`, dialogs fill viewport width, servers table collapses description column on tiny screens.
+  - [x] "See The Workings" menu item hidden on phones — node graph is not usable at mobile scale.
+  - [x] Dialogs capped at `92dvh` with `overflow-y: auto` to prevent off-screen overflow.
+- [x] **Voice Recognition Integration**
+  - [x] Integrated native Web Speech API (zero dependencies).
+  - [x] Microphone button (🎙) fixed bottom-right; pulses red while listening; hidden if browser unsupported.
+  - [x] Commands: "open options", "open new game", "open servers", "quit", "close", "workings", "see the workings", "zoom in", "zoom out".
+  - [x] Toast notification shows recognised transcript (✓ matched, ? unmatched).

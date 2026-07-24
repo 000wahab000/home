@@ -853,13 +853,14 @@ document.addEventListener('DOMContentLoaded', function () {
         var body = node.querySelector('.node-body');
         body.innerHTML = '';
 
-        // dblclick → open Spotify album (or search fallback)
+        // Register Spotify URL for dblclick — keyed by data-album, NOT by mutating data-part.
         var spotifyUrl = data.id
             ? 'https://open.spotify.com/' + (data.embedType || 'album') + '/' + data.id
             : 'https://open.spotify.com/search/' + encodeURIComponent((data.artist + ' ' + data.name).trim());
         var partKey = 'spotify-' + key;
         SOCIAL_URLS[partKey] = spotifyUrl;
-        node.setAttribute('data-part', partKey);
+        // Store partKey on node so dblclick handler can find it without mutating data-part
+        node.setAttribute('data-spotify-key', partKey);
 
         var card = document.createElement('div');
         card.className = 'spotify-card';
@@ -895,8 +896,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 activePopup.remove();
                 activePopup = null;
                 card.classList.remove('playing');
-                node.style.overflow = '';
-                body.style.overflow = '';
                 return;
             }
             var popup = document.createElement('div');
@@ -909,13 +908,37 @@ document.addEventListener('DOMContentLoaded', function () {
                 iframe.setAttribute('loading', 'lazy');
                 popup.appendChild(iframe);
             } else {
-                popup.innerHTML = '<div class="spotify-pending">ID pending — dblclick to search Spotify<\/div>';
+                popup.innerHTML = '<div class="spotify-pending">ID pending \u2014 dblclick to search Spotify<\/div>';
             }
-            node.style.overflow = 'visible';
-            body.style.overflow = 'visible';
-            card.appendChild(popup);
+
+            // Attach to body so it’s never clipped by overflow:hidden ancestors.
+            popup.style.position = 'fixed';
+            popup.style.zIndex = '9000';
+            document.body.appendChild(popup);
+
+            // Position popup above (or below) the card using screen coords.
+            var rect = card.getBoundingClientRect();
+            var popW = 280, popH = 162;
+            var left = rect.left + rect.width / 2 - popW / 2;
+            var top  = rect.top - popH - 8;
+            if (top < 8) top = rect.bottom + 8;
+            left = Math.max(8, Math.min(left, window.innerWidth - popW - 8));
+            popup.style.left = left + 'px';
+            popup.style.top  = top  + 'px';
+
             activePopup = popup;
             card.classList.add('playing');
+
+            // Close when clicking outside
+            function onDocClick(ev) {
+                if (!popup.contains(ev.target) && ev.target !== card) {
+                    popup.remove();
+                    activePopup = null;
+                    card.classList.remove('playing');
+                    document.removeEventListener('click', onDocClick, true);
+                }
+            }
+            setTimeout(function () { document.addEventListener('click', onDocClick, true); }, 50);
         });
 
         body.appendChild(card);
@@ -1401,6 +1424,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Social preview nodes navigate to the real profile page
         var part = node.getAttribute('data-part');
+        // Spotify nodes store their URL key in data-spotify-key (data-part stays 'spotify')
+        var spotifyKey = node.getAttribute('data-spotify-key');
+        if (spotifyKey && SOCIAL_URLS[spotifyKey]) {
+            window.open(SOCIAL_URLS[spotifyKey], '_blank', 'noopener');
+            return;
+        }
         if (SOCIAL_URLS[part]) {
             window.open(SOCIAL_URLS[part], '_blank', 'noopener');
             return;
@@ -1409,4 +1438,123 @@ document.addEventListener('DOMContentLoaded', function () {
         var dialog = document.getElementById(node.getAttribute('data-dialog'));
         if (dialog) openDialog(dialog);
     });
+
+    // ── Expose voice command hooks ────────────────────────────────────────────
+    // Populated here so the voice module (outside this closure) can call them
+    // without needing to restructure the entire script.
+    window._voiceCmds = {
+        openOptions:   function () { openDialog(optionsDialog); },
+        openNewGame:   function () { openDialog(newGame); },
+        openServers:   function () { openDialog(serversDialog); },
+        openQuit:      function () { openDialog(quitDialog); },
+        closeAll:      function () {
+            [newGame, optionsDialog, quitDialog, serversDialog].forEach(function (d) {
+                if (d && d.open) { d.close(); menuCloseSound.currentTime = 0; menuCloseSound.play(); }
+            });
+        },
+        workings:      function () { isWorkingsMode ? exitWorkingsMode() : enterWorkingsMode(); },
+        zoomIn:        function () {
+            if (!isWorkingsMode) return;
+            currentScale = Math.min(currentScale * 1.25, 1.5);
+            applyTransform();
+        },
+        zoomOut:       function () {
+            if (!isWorkingsMode) return;
+            currentScale = currentScale * 0.8;
+            applyTransform();
+        }
+    };
 });
+
+// ── Voice Recognition Module ─────────────────────────────────────────────────
+// Uses native Web Speech API — no dependencies.
+// Commands are dispatched via window._voiceCmds which is set inside DOMContentLoaded.
+(function () {
+    var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    var btn   = document.getElementById('voice-btn');
+    var toast = document.getElementById('voice-toast');
+    if (!btn || !toast) return;
+
+    if (!SpeechRecognition) {
+        btn.classList.add('no-support');
+        return;
+    }
+
+    var recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 3;
+
+    var listening = false;
+    var toastTimer = null;
+
+    function showToast(msg) {
+        toast.textContent = msg;
+        toast.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(function () { toast.classList.remove('show'); }, 2200);
+    }
+
+    // Keyword → command map. Checked as substring of transcript (lowercase).
+    var COMMANDS = [
+        { phrase: 'open options',         fn: 'openOptions' },
+        { phrase: 'options',              fn: 'openOptions' },
+        { phrase: 'open new game',        fn: 'openNewGame' },
+        { phrase: 'new game',             fn: 'openNewGame' },
+        { phrase: 'open servers',         fn: 'openServers' },
+        { phrase: 'find servers',         fn: 'openServers' },
+        { phrase: 'servers',              fn: 'openServers' },
+        { phrase: 'quit',                 fn: 'openQuit' },
+        { phrase: 'close',               fn: 'closeAll' },
+        { phrase: 'escape',              fn: 'closeAll' },
+        { phrase: 'see the workings',     fn: 'workings' },
+        { phrase: 'workings',             fn: 'workings' },
+        { phrase: 'zoom in',              fn: 'zoomIn' },
+        { phrase: 'zoom out',             fn: 'zoomOut' }
+    ];
+
+    function dispatch(transcript) {
+        var t = transcript.toLowerCase().trim();
+        var cmds = window._voiceCmds;
+        if (!cmds) return false;
+
+        for (var i = 0; i < COMMANDS.length; i++) {
+            if (t.indexOf(COMMANDS[i].phrase) !== -1) {
+                var fn = cmds[COMMANDS[i].fn];
+                if (fn) fn();
+                showToast('✓ ' + transcript);
+                return true;
+            }
+        }
+        showToast('? ' + transcript);
+        return false;
+    }
+
+    recognition.addEventListener('result', function (e) {
+        // Try all alternatives
+        for (var i = 0; i < e.results[0].length; i++) {
+            if (dispatch(e.results[0][i].transcript)) return;
+        }
+    });
+
+    recognition.addEventListener('end', function () {
+        listening = false;
+        btn.classList.remove('listening');
+    });
+
+    recognition.addEventListener('error', function (e) {
+        listening = false;
+        btn.classList.remove('listening');
+        if (e.error !== 'no-speech') showToast('⚠ ' + e.error);
+    });
+
+    btn.addEventListener('click', function () {
+        if (listening) {
+            recognition.stop();
+        } else {
+            listening = true;
+            btn.classList.add('listening');
+            recognition.start();
+        }
+    });
+}());
