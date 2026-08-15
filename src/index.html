@@ -211,6 +211,21 @@
         </form>
     </dialog>
 
+    <dialog class="cs-dialog certs-dialog" id="certs-dialog">
+        <form method="dialog">
+            <div class="heading">
+                <div class="wrapper">
+                    <div class="icon"></div>
+                    <p class="text">Certificates</p>
+                </div>
+                <button class="cs-btn close"></button>
+            </div>
+            <div class="content">
+                Certificates &amp; Participations
+            </div>
+        </form>
+    </dialog>
+
     <dialog class="cs-dialog servers-dialog" id="servers-dialog">
         <form method="dialog">
             <div class="heading">
@@ -560,6 +575,37 @@
         <div class="node child-node" id="node-srv-stackrx" data-dialog="servers-dialog" data-part="project"
             data-project="stackrx" data-parent="hub-srv">
             <div class="node-bar">StackRx</div>
+            <div class="node-body"></div>
+        </div>
+        <!-- HUB NODE: Certificates -->
+        <div class="node hub-node" id="hub-certs" data-dialog="certs-dialog">
+            <div class="node-bar">Certificates</div>
+            <div class="node-body"></div>
+        </div>
+
+        <!-- CHILD NODES: Certificates -->
+        <div class="node child-node" id="node-cert-zuup" data-part="cert-img" data-cert="cert-zuup.png" data-parent="hub-certs">
+            <div class="node-bar">Far Away (Zuup)</div>
+            <div class="node-body"></div>
+        </div>
+        <div class="node child-node" id="node-cert-agents" data-part="cert-img" data-cert="cert-agents.png" data-parent="hub-certs">
+            <div class="node-bar">AI Agents Assemble</div>
+            <div class="node-body"></div>
+        </div>
+        <div class="node child-node" id="node-cert-pragati" data-part="cert-img" data-cert="cert-pragati.png" data-parent="hub-certs">
+            <div class="node-bar">Pragati 2.0</div>
+            <div class="node-body"></div>
+        </div>
+        <div class="node child-node" id="node-cert-veslang" data-part="cert-img" data-cert="cert-veslang.png" data-parent="hub-certs">
+            <div class="node-bar">VESLang Circle</div>
+            <div class="node-body"></div>
+        </div>
+        <div class="node child-node" id="node-cert-llm" data-part="cert-img" data-cert="wahab shafi shaikh.png" data-parent="hub-certs">
+            <div class="node-bar">LLM Council Workshop</div>
+            <div class="node-body"></div>
+        </div>
+        <div class="node child-node" id="node-cert-hackathon" data-part="cert-img" data-cert="Wahab Shaikh.png" data-parent="hub-certs">
+            <div class="node-bar">Hack-AI-Thon 4.0</div>
             <div class="node-body"></div>
         </div>
     </div>

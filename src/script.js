@@ -585,6 +585,7 @@ document.addEventListener('DOMContentLoaded', function () {
             var wireColor = 'rgba(196,181,80,0.85)';
             if (hub.id === 'hub-math') wireColor = 'rgba(88,196,221,0.75)';
             if (hub.id === 'hub-lcd') wireColor = 'rgba(100,180,255,0.8)'; // LCD blue backlight
+            if (hub.id === 'hub-certs') wireColor = 'rgba(180,120,255,0.8)'; // purple for certs
             drawWire(pair.a.x, pair.a.y, pair.a.dir, pair.b.x, pair.b.y, pair.b.dir, wireColor);
         });
 
@@ -1305,6 +1306,21 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
+        // CERTIFICATE IMAGE NODES — lazy-loaded image
+        if (part === 'cert-img') {
+            var certFile = node.getAttribute('data-cert');
+            var certBody = node.querySelector('.node-body');
+            certBody.innerHTML = '';
+            var certImg = document.createElement('img');
+            certImg.src = 'images/' + certFile;
+            certImg.alt = node.querySelector('.node-bar').textContent.trim() + ' certificate';
+            certImg.loading = 'lazy';
+            certImg.style.cssText = 'display:block;width:320px;height:auto;border-radius:2px;';
+            certBody.appendChild(certImg);
+            node.style.width = '320px';
+            return;
+        }
+
         var dialog = document.getElementById(dialogId);
         if (!dialog) return;
 
@@ -1433,12 +1449,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Hub target positions
         var hubTargets = {
-            'hub-ng':   { x: -Math.round(vw * 0.45), y: 40 },
-            'hub-opt':  { x: vw + 20, y: 40 },
-            'hub-quit': { x: -Math.round(vw * 0.15), y: Math.round(vh * 0.65) },
-            'hub-srv':  { x: Math.round(vw * 0.22), y: vh + 30 },
-            'hub-math': { x: Math.round(vw * 0.5) - 140, y: -220 },  // floats above center
-            'hub-lcd':  { x: -Math.round(vw * 0.48), y: Math.round(vh * 0.8) } // floats bottom-left
+            'hub-ng':    { x: -Math.round(vw * 0.45), y: 40 },
+            'hub-opt':   { x: vw + 20, y: 40 },
+            'hub-quit':  { x: -Math.round(vw * 0.15), y: Math.round(vh * 0.65) },
+            'hub-srv':   { x: Math.round(vw * 0.22), y: vh + 30 },
+            'hub-math':  { x: Math.round(vw * 0.5) - 140, y: -220 },  // floats above center
+            'hub-lcd':   { x: -Math.round(vw * 0.48), y: Math.round(vh * 0.8) }, // floats bottom-left
+            'hub-certs': { x: Math.round(vw * 0.6), y: -Math.round(vh * 0.25) } // top-right
         };
 
         // Read hub sizes after injection
