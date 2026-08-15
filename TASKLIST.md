@@ -110,3 +110,51 @@ This document serves as the master tasklist and historical log for the project, 
     - Screen 4 — Uptime / Timestamp: current date + time rendered in real-time
   - [x] Stop/clear the LCD timer in `exitWorkingsMode()` (same cleanup pattern as RAF loop for `hub-math`).
   - [ ] **Cloudflare data (deferred):** Visitor/session counts are `0` placeholders. Real data requires a serverless proxy (Cloudflare Worker or Vercel function) to safely call the Cloudflare Analytics API — build this separately once working model is confirmed.
+
+---
+
+## Phase 4: UX Overhaul & Rich Media Showcase (Pending Clarification / Development)
+*Addressing scattered layout, adding collapsible subsections, rich project media, and organized expand-on-demand nodes.*
+
+- [ ] **Collapsible Subsection System (Global)**
+  - [ ] All subsections/child nodes should be collapsed by default — only the top-level parent hub nodes are visible at start.
+  - [ ] Each parent hub has an expand/collapse toggle button. Clicking it reveals or hides all its child nodes and connecting wires.
+  - [ ] "Collapse All" global button to fold every open subsection back to just top-level hubs.
+  - [ ] Collapsed state should animate smoothly (nodes shrink/fade, wires retract) rather than popping in/out.
+  - [ ] Collapsed state persists per-session (remember which hubs the user opened).
+
+- [ ] **Certifications — Expand-on-Demand**
+  - [ ] Certs are NOT open by default. A single "Certifications" parent hub button is shown.
+  - [ ] Clicking the hub reveals individual cert sub-nodes (one per certificate).
+  - [ ] Each cert sub-node opens a rich dialog: cert image/PDF viewer + verification link.
+  - [ ] Gather all cert images, PDFs, and verification URLs before implementing. *(Clarification needed — see questions below)*
+
+- [ ] **Social Links — Expand-on-Demand**
+  - [ ] GitHub, LinkedIn, Twitter/X (and any other socials) are grouped under a single "Socials" parent hub.
+  - [ ] Hub is collapsed by default; clicking it reveals the individual social sub-nodes.
+  - [ ] Each sub-node opens its respective profile (tab/link), not inline content.
+  - [ ] *(Clarification needed: exact list of socials to include)*
+
+- [ ] **Projects — Dual-Category Expand-on-Demand**
+  - [ ] Projects hub splits into two sub-categories: **Ongoing** and **Done/Completed**.
+  - [ ] Both sub-categories are collapsed by default under the Projects hub.
+  - [ ] Clicking "Ongoing" expands only the in-progress project nodes; clicking "Done" expands only the completed ones.
+  - [ ] Each project node opens a rich showcase dialog (see media section below).
+
+- [ ] **Project Showcase — Video & GIF Media Integration**
+  - [ ] For each project node dialog, embed a video/GIF showcase of the project working.
+  - [ ] User will supply video files per project — these get embedded as `<video>` elements (autoplay, loop, muted) or `<img>` for GIFs.
+  - [ ] *(Clarification needed: list of projects + which are ongoing vs done, and which media files go with each)*
+
+- [ ] **ML Project — Manim-Style Mathematical Showcase**
+  - [ ] The Draw-C-AI / KNN ML project node gets a special showcase section.
+  - [ ] Embed GIFs/videos showing the ML model working in action.
+  - [ ] Include a Manim-rendered (or Manim-style canvas) animation explaining the mathematical intuition (how the algorithm works visually).
+  - [ ] User will supply the GIF/video files. Manim animations to be generated separately and exported as video/GIF.
+  - [ ] *(Clarification needed: which specific ML aspects to animate — KNN decision boundary? pixel distance? vote weights?)*
+
+- [ ] **Collapse/Expand All Controls**
+  - [ ] A persistent UI control (e.g., small button panel in a corner) with:
+    - "Expand All" — opens all subsections across all hubs.
+    - "Collapse All" — closes all subsections, returns to top-level-only view.
+  - [ ] Individual hub headers retain their own toggle independent of the global control.
