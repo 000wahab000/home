@@ -1353,3 +1353,19 @@ body.zoomed-out.is-dragging #app-viewport {
     border-radius: 4px;
     border: 1px solid rgba(196, 181, 80, 0.2);
 }
+
+/* ── 3b1b Engine node — Manim blue accent ──────────────────────────── */
+#hub-math .node-bar {
+    background: linear-gradient(135deg, rgba(20,40,55,0.95) 0%, rgba(30,60,75,0.9) 100%);
+    color: rgba(88, 196, 221, 0.92);
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid rgba(88, 196, 221, 0.25);
+    box-shadow: 0 2px 12px rgba(88, 196, 221, 0.12);
+}
+#hub-math.node-selected {
+    border-left-color: #58c4dd;
+    box-shadow: -3px 0 14px rgba(88,196,221,0.3);
+}
+#hub-math .node-body canvas {
+    border-radius: 0 0 2px 2px;
+}

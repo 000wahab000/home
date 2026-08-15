@@ -91,6 +91,8 @@ SERVERS (4):        node-srv-live, node-srv-done, node-srv-wip, node-srv-acts
 - grengjai:    33DzKnwuBE6lfOiADwzd5E  (Phum Viphurit - Greng Jai Piece, embedType:track)
 - snowfall:    5poA9SAx0Xiz1cf17fWBLS  (Øneheart - Snowfall)
 
+
+
 [Pending IDs - user to supply Spotify album links]:
 - letsstart (Lil Yachty - Let's Start Here.)
 - lsd (A$AP Rocky - At.Long.Last.A$AP)
@@ -98,3 +100,37 @@ SERVERS (4):        node-srv-live, node-srv-done, node-srv-wip, node-srv-acts
 - tootime (The 1975 - TOOTIMETOOTIMETOOTIME)  ← NEW, added 2026-07-19
 
 
+=====================================
+MODEL FUCK-UPS LOG (learn from these)
+=====================================
+
+[2026-08-10] UNSOLICITED COLOR CHOICE — 3b1b Engine node
+---------------------------------------------------------
+WHAT HAPPENED:
+  When implementing the 3Blue1Brown canvas animation node, the model chose
+  purple/violet colors (rgba(160,120,255,...)) for the canvas animation
+  without being asked. The user explicitly called this out.
+
+WHY IT WAS WRONG:
+  The actual 3Blue1Brown / Manim color palette is:
+    - Background: very dark / transparent (not purple)
+    - Primary drawing color: bright cyan-blue #58C4DD (rgba(88,196,221,...))
+    - Text / equations: white (rgba(255,255,255,...))
+    - Accent / labels: gold-yellow (rgba(196,181,80,...)) — matches the existing wire palette
+  Purple is not part of Manim's aesthetic at all. The model invented it.
+
+ROOT CAUSE:
+  The model made a visual design decision that was not requested. The task was
+  to implement the ENGINE — the colors should have faithfully matched the real
+  Manim aesthetic, not something the model improvised.
+
+RULE TO ADD:
+  Do NOT invent color schemes for features that have an established real-world
+  reference. If implementing something that already exists (Manim, CS 1.6, Spotify,
+  GitHub), match the actual palette of that thing. Only use creative freedom on
+  elements that have no real-world reference.
+
+FIXED:
+  Colors corrected to: BLUE = rgba(88,196,221,...), white text, gold labels.
+  Wire color also corrected from violet to a blue-tinted wire (rgba(88,196,221,0.75)).
+  CSS for #hub-math .node-bar updated to remove purple gradient.

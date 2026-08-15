@@ -367,6 +367,9 @@ document.addEventListener('DOMContentLoaded', function () {
     function exitWorkingsMode() {
         isWorkingsMode = false;
         isDragging = false;
+        // Stop math canvas animation loop
+        var mathNode = document.getElementById('hub-math');
+        if (mathNode && mathNode._mathCleanup) mathNode._mathCleanup();
         hideNodes();
         document.body.classList.remove('zoomed-out');
         document.body.classList.remove('is-dragging');
@@ -572,14 +575,17 @@ document.addEventListener('DOMContentLoaded', function () {
             { x: vw, y: vh / 2, dir: 'right' }
         ];
 
-        // Level 1 — viewport → hub  (gold)
+        // Level 1 — viewport → hub  (gold for standard hubs, violet for math hub)
         nodesLayer.querySelectorAll('.hub-node').forEach(function (hub) {
             var pos = nodePositions[hub.id];
             if (!pos || parseFloat(hub.style.opacity) < 0.05) return;
             var w = hub.offsetWidth || 200, h = hub.offsetHeight || 150;
             var pair = nearestPair(vPorts, getPorts(pos, w, h));
             if (!pair) return;
-            drawWire(pair.a.x, pair.a.y, pair.a.dir, pair.b.x, pair.b.y, pair.b.dir, 'rgba(196,181,80,0.85)');
+            var wireColor = hub.id === 'hub-math'
+                ? 'rgba(88,196,221,0.75)'
+                : 'rgba(196,181,80,0.85)';
+            drawWire(pair.a.x, pair.a.y, pair.a.dir, pair.b.x, pair.b.y, pair.b.dir, wireColor);
         });
 
         // Level 2 — hub → child  (steel-blue)
@@ -833,6 +839,238 @@ document.addEventListener('DOMContentLoaded', function () {
         node.style.width = '240px';
     }
 
+    // ── 3Blue1Brown-style Canvas Animation Mini-Engine ───────────────────────
+    // Zero dependencies — Canvas 2D API + requestAnimationFrame only.
+    // Three animation phases loop continuously:
+    //   Phase 0 (0..1):   A dot traces a bezier path (matches wire aesthetic)
+    //   Phase 1 (0..1):   Equation text writes itself stroke-by-stroke
+    //   Phase 2 (0..1):   A shape morphs (square corners → circle)
+    // API hook: set window._mathResult = { text: '...' } to inject result text.
+    var _mathRafId = null;
+
+    function injectMathCanvas(node) {
+        var W = 280, H = 200;
+        node.style.width = W + 'px';
+
+        var body = node.querySelector('.node-body');
+        body.innerHTML = '';
+        body.style.height = H + 'px';
+        body.style.padding = '0';
+        body.style.overflow = 'hidden';
+
+        var canvas = document.createElement('canvas');
+        canvas.width = W;
+        canvas.height = H;
+        canvas.style.display = 'block';
+        canvas.style.background = 'transparent';
+        body.appendChild(canvas);
+
+        var ctx = canvas.getContext('2d');
+
+        // Rate function: matches the cubic-bezier(0.16,1,0.3,1) used by nodes
+        function smooth(t) {
+            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        }
+
+        // Bezier point at parameter t
+        function bez(p0x, p0y, p1x, p1y, p2x, p2y, p3x, p3y, t) {
+            var mt = 1 - t;
+            return {
+                x: mt*mt*mt*p0x + 3*mt*mt*t*p1x + 3*mt*t*t*p2x + t*t*t*p3x,
+                y: mt*mt*mt*p0y + 3*mt*mt*t*p1y + 3*mt*t*t*p2y + t*t*t*p3y
+            };
+        }
+
+        // Shape lerp: square corners → circle (via border-radius simulation on canvas)
+        function drawMorphShape(cx, cy, r, phase) {
+            // phase 0 = square, 1 = circle
+            var s = smooth(phase);
+            ctx.beginPath();
+            var sides = 4;
+            for (var i = 0; i <= sides * 12; i++) {
+                var angle = (i / (sides * 12)) * Math.PI * 2;
+                // Superellipse: p=2 is circle, p→∞ is square
+                // p = lerp(10, 2, s)
+                var p = 10 - 8 * s;
+                var cosA = Math.cos(angle), sinA = Math.sin(angle);
+                var x = cx + r * Math.sign(cosA) * Math.pow(Math.abs(cosA), 2/p);
+                var y = cy + r * Math.sign(sinA) * Math.pow(Math.abs(sinA), 2/p);
+                i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+        }
+
+        // Real Manim palette: bright blue primary, white text, yellow accent
+        var BLUE = 'rgba(88,196,221,';
+        var DIM  = 'rgba(88,196,221,0.18)';
+
+        // Bezier control points for the tracing path (world-space in canvas coords)
+        var BX0=20, BY0=H-30, BX1=W*0.1, BY1=H*0.2, BX2=W*0.9, BY2=H*0.8, BX3=W-20, BY3=30;
+
+        var startTime = null;
+        var CYCLE = 4200; // ms per full 3-phase cycle
+        var PHASE_DUR = [0.38, 0.32, 0.30]; // fraction of cycle for each phase
+
+        // Equations to cycle through (typewriter targets)
+        var EQUATIONS = ['f(x) = \u03a3 aₙxⁿ', 'E = mc²', '\u222b sin(x) dx', 'P(A|B) = P(B|A)·P(A) / P(B)'];
+        var eqIdx = 0;
+
+        function frame(ts) {
+            if (!startTime) startTime = ts;
+            var elapsed = (ts - startTime) % CYCLE;
+            var progress = elapsed / CYCLE; // 0..1 for whole cycle
+
+            // Determine which phase we're in
+            var p0end = PHASE_DUR[0];
+            var p1end = p0end + PHASE_DUR[1];
+            var phase, phaseT;
+            if (progress < p0end) {
+                phase = 0; phaseT = progress / p0end;
+            } else if (progress < p1end) {
+                phase = 1; phaseT = (progress - p0end) / PHASE_DUR[1];
+            } else {
+                phase = 2; phaseT = (progress - p1end) / PHASE_DUR[2];
+            }
+
+            // Cycle equation on phase 1 start
+            if (phase === 1 && phaseT < 0.02) {
+                // only advance once per cycle
+            }
+
+            ctx.clearRect(0, 0, W, H);
+
+            // ── Background ticks (grid reference, very dim) ──────────────
+            ctx.strokeStyle = 'rgba(88,196,221,0.07)';
+            ctx.lineWidth = 1;
+            for (var gx = 20; gx < W; gx += 20) {
+                ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, H); ctx.stroke();
+            }
+            for (var gy = 20; gy < H; gy += 20) {
+                ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke();
+            }
+
+            if (phase === 0) {
+                // ── Phase 0: dot tracing bezier wire ────────────────────
+                var t = smooth(phaseT);
+
+                // Draw full wire dim
+                ctx.beginPath();
+                ctx.moveTo(BX0, BY0);
+                ctx.bezierCurveTo(BX1, BY1, BX2, BY2, BX3, BY3);
+                ctx.strokeStyle = DIM;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Draw traced portion bright
+                ctx.beginPath();
+                ctx.moveTo(BX0, BY0);
+                var steps = Math.ceil(t * 60);
+                for (var si = 1; si <= steps; si++) {
+                    var pt = bez(BX0, BY0, BX1, BY1, BX2, BY2, BX3, BY3, si / 60);
+                    ctx.lineTo(pt.x, pt.y);
+                }
+                ctx.strokeStyle = BLUE + '0.85)';
+                ctx.lineWidth = 2.5;
+                ctx.stroke();
+
+                // Endpoint dots
+                [{ x: BX0, y: BY0 }, { x: BX3, y: BY3 }].forEach(function(p, i) {
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, i === 0 ? 5 : 4, 0, Math.PI * 2);
+                    ctx.fillStyle = BLUE + '0.8)';
+                    ctx.fill();
+                });
+
+                // Moving dot
+                var dot = bez(BX0, BY0, BX1, BY1, BX2, BY2, BX3, BY3, t);
+                ctx.beginPath();
+                ctx.arc(dot.x, dot.y, 6, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255,255,255,0.95)';
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(dot.x, dot.y, 10, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(88,196,221,0.20)';
+                ctx.fill();
+
+            } else if (phase === 1) {
+                // ── Phase 1: typewriter equation ─────────────────────────
+                var eq = (window._mathResult && window._mathResult.text)
+                    ? window._mathResult.text
+                    : EQUATIONS[eqIdx % EQUATIONS.length];
+                var visible = Math.ceil(smooth(phaseT) * eq.length);
+                var displayText = eq.slice(0, visible);
+
+                ctx.font = 'bold 18px monospace';
+                ctx.fillStyle = 'rgba(255,255,255,0.92)';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(displayText, W / 2, H / 2);
+
+                // Blinking cursor
+                if (phaseT < 0.9) {
+                    var tw = ctx.measureText(displayText).width;
+                    var cx2 = W / 2 + tw / 2 + 3;
+                    var blinkOn = Math.floor(ts / 420) % 2 === 0;
+                    if (blinkOn) {
+                        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+                        ctx.fillRect(cx2, H / 2 - 12, 2, 20);
+                    }
+                }
+
+                // Label
+                ctx.font = '9px monospace';
+                ctx.fillStyle = 'rgba(196,181,80,0.55)';
+                ctx.textAlign = 'center';
+                ctx.fillText('MANIM ENGINE', W / 2, H - 12);
+
+                // On full reveal, advance equation index for next cycle
+                if (phaseT > 0.98 && !window._mathResult) eqIdx++;
+
+            } else {
+                // ── Phase 2: morphing shape ───────────────────────────────
+                var morphT = smooth(phaseT < 0.5 ? phaseT * 2 : (1 - phaseT) * 2);
+                var shapeR = 38;
+                var scx = W / 2, scy = H / 2;
+
+                // Outer glow
+                var grad = ctx.createRadialGradient(scx, scy, shapeR * 0.4, scx, scy, shapeR * 1.4);
+                grad.addColorStop(0, 'rgba(88,196,221,0.12)');
+                grad.addColorStop(1, 'rgba(88,196,221,0)');
+                ctx.beginPath();
+                ctx.arc(scx, scy, shapeR * 1.4, 0, Math.PI * 2);
+                ctx.fillStyle = grad;
+                ctx.fill();
+
+                drawMorphShape(scx, scy, shapeR, morphT);
+                ctx.strokeStyle = BLUE + '0.85)';
+                ctx.lineWidth = 2.5;
+                ctx.stroke();
+                drawMorphShape(scx, scy, shapeR, morphT);
+                ctx.fillStyle = 'rgba(88,196,221,0.08)';
+                ctx.fill();
+
+                // Label
+                ctx.font = '9px monospace';
+                ctx.fillStyle = 'rgba(196,181,80,0.55)';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(morphT < 0.5 ? 'square → circle' : 'circle → square', W / 2, H - 12);
+            }
+
+            _mathRafId = requestAnimationFrame(frame);
+        }
+
+        // Stop previous loop if re-entering workings mode
+        if (_mathRafId) cancelAnimationFrame(_mathRafId);
+        _mathRafId = requestAnimationFrame(frame);
+
+        // Clean up on exit
+        node._mathCleanup = function () {
+            cancelAnimationFrame(_mathRafId);
+            _mathRafId = null;
+        };
+    }
+
     // ── Music section header (node-opt-music) ────────────────────────────────
     function injectMusicSection(node) {
         var body = node.querySelector('.node-body');
@@ -949,6 +1187,12 @@ document.addEventListener('DOMContentLoaded', function () {
     function injectDialogClone(node) {
         var dialogId = node.getAttribute('data-dialog');
         var part = node.getAttribute('data-part');   // null for hub nodes
+
+        // MATH CANVAS NODE — no dialog needed
+        if (part === 'math-canvas') {
+            injectMathCanvas(node);
+            return;
+        }
 
         // SPOTIFY MUSIC NODES — no dialog needed
         if (part === 'spotify') {
@@ -1087,7 +1331,8 @@ document.addEventListener('DOMContentLoaded', function () {
             'hub-ng':   { x: -Math.round(vw * 0.45), y: 40 },
             'hub-opt':  { x: vw + 20, y: 40 },
             'hub-quit': { x: -Math.round(vw * 0.15), y: Math.round(vh * 0.65) },
-            'hub-srv':  { x: Math.round(vw * 0.22), y: vh + 30 }
+            'hub-srv':  { x: Math.round(vw * 0.22), y: vh + 30 },
+            'hub-math': { x: Math.round(vw * 0.5) - 140, y: -220 }  // floats above center
         };
 
         // Read hub sizes after injection
@@ -1306,10 +1551,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Accent colour for each hub; children inherit their parent hub's colour
     var HUB_COLORS = {
-        'hub-ng': '#1a8080',   // dark teal          — Create Server
-        'hub-opt': '#993333',   // dark red-teal       — Options
+        'hub-ng':   '#1a8080',   // dark teal          — Create Server
+        'hub-opt':  '#993333',   // dark red-teal       — Options
         'hub-quit': '#2d7a40',   // dark green-teal     — Quit / Confirm
-        'hub-srv': '#7a6e1a'    // dark yellow-teal    — Servers
+        'hub-srv':  '#7a6e1a',   // dark yellow-teal    — Servers
+        'hub-math': '#58c4dd'    // Manim cyan-blue      — 3b1b Engine
     };
 
     function getNodeAccent(node) {
