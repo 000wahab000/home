@@ -156,8 +156,6 @@ function initServersDialog() {
 }
 
 // ── Calendar grid renderer ─────────────────────────────────────────────────────────
-// contributions: [{ date:'YYYY-MM-DD', count:N, level:0-4 }]
-// scheme: 'gh' (gold tones) | 'lc' (steel-blue tones)
 function renderCalendarGrid(contributions, scheme) {
     var grid = document.createElement('div');
     grid.className = 'contrib-grid';
@@ -370,6 +368,8 @@ document.addEventListener('DOMContentLoaded', function () {
         // Stop math canvas animation loop
         var mathNode = document.getElementById('hub-math');
         if (mathNode && mathNode._mathCleanup) mathNode._mathCleanup();
+        var lcdNode = document.getElementById('hub-lcd');
+        if (lcdNode && lcdNode._lcdCleanup) lcdNode._lcdCleanup();
         hideNodes();
         document.body.classList.remove('zoomed-out');
         document.body.classList.remove('is-dragging');
@@ -582,9 +582,9 @@ document.addEventListener('DOMContentLoaded', function () {
             var w = hub.offsetWidth || 200, h = hub.offsetHeight || 150;
             var pair = nearestPair(vPorts, getPorts(pos, w, h));
             if (!pair) return;
-            var wireColor = hub.id === 'hub-math'
-                ? 'rgba(88,196,221,0.75)'
-                : 'rgba(196,181,80,0.85)';
+            var wireColor = 'rgba(196,181,80,0.85)';
+            if (hub.id === 'hub-math') wireColor = 'rgba(88,196,221,0.75)';
+            if (hub.id === 'hub-lcd') wireColor = 'rgba(100,180,255,0.8)'; // LCD blue backlight
             drawWire(pair.a.x, pair.a.y, pair.a.dir, pair.b.x, pair.b.y, pair.b.dir, wireColor);
         });
 
@@ -1183,6 +1183,105 @@ document.addEventListener('DOMContentLoaded', function () {
         node.style.width = '120px';
     }
 
+    // ── LCD Stats Widget ──────────────────────────────────────────────────────
+    function injectLcdStats(node) {
+        var body = node.querySelector('.node-body');
+        body.innerHTML = '';
+        
+        var pcb = document.createElement('div');
+        pcb.className = 'lcd-pcb';
+        
+        var bezel = document.createElement('div');
+        bezel.className = 'lcd-bezel';
+        
+        var screen = document.createElement('div');
+        screen.className = 'lcd-screen';
+        
+        var tooltip = document.createElement('div');
+        tooltip.className = 'lcd-tooltip';
+        
+        var stats = [
+            { label: 'VISITORS', value: '0', title: 'Sessions (Pending Cloudflare proxy)' },
+            { label: 'PERF(MS)', value: '---', title: 'Page Load + TTFB' },
+            { label: 'HEAP MEM', value: '---', title: 'JS Heap Size (Chrome)' },
+            { label: 'SYS TIME', value: '---', title: 'Local System Time' }
+        ];
+        
+        if (window.performance) {
+            var nav = performance.getEntriesByType('navigation')[0] || performance.timing;
+            if (nav) {
+                var start = nav.startTime || nav.navigationStart || 0;
+                var load = nav.loadEventEnd ? Math.round(nav.loadEventEnd - start) : 0;
+                var ttfb = nav.responseStart ? Math.round(nav.responseStart - start) : 0;
+                if (load > 0) {
+                    stats[1].value = load + 'ms';
+                    stats[1].title = 'Load: ' + load + 'ms | TTFB: ' + ttfb + 'ms';
+                }
+            }
+        }
+        
+        var currentIndex = 0;
+        
+        function updateScreen() {
+            if (window.performance && performance.memory) {
+                var mb = Math.round(performance.memory.usedJSHeapSize / (1024 * 1024));
+                stats[2].value = mb + 'MB';
+            } else {
+                stats[2].value = 'N/A';
+            }
+            
+            var d = new Date();
+            stats[3].value = d.getHours().toString().padStart(2, '0') + ':' + 
+                             d.getMinutes().toString().padStart(2, '0') + ':' + 
+                             d.getSeconds().toString().padStart(2, '0');
+                             
+            var s = stats[currentIndex];
+            screen.innerHTML = '<div class="lcd-line">' + s.label + '</div><div class="lcd-line lcd-val">' + s.value + '</div>';
+            tooltip.textContent = s.title;
+        }
+        
+        updateScreen();
+        bezel.appendChild(screen);
+        pcb.appendChild(bezel);
+        
+        var flexCable = document.createElement('div');
+        flexCable.className = 'lcd-flex';
+        pcb.appendChild(flexCable);
+        
+        pcb.appendChild(tooltip);
+        
+        var container = document.createElement('div');
+        container.className = 'node-part-inner';
+        container.appendChild(pcb);
+        
+        body.appendChild(container);
+        
+        node.style.width = '200px';
+        
+        var cycleTimer;
+        function resetTimer() {
+            clearInterval(cycleTimer);
+            cycleTimer = setInterval(function() {
+                currentIndex = (currentIndex + 1) % stats.length;
+                updateScreen();
+            }, 4000);
+        }
+        
+        screen.addEventListener('click', function() {
+            currentIndex = (currentIndex + 1) % stats.length;
+            updateScreen();
+            resetTimer();
+        });
+        
+        var liveTimer = setInterval(updateScreen, 1000);
+        resetTimer();
+        
+        node._lcdCleanup = function() {
+            clearInterval(liveTimer);
+            clearInterval(cycleTimer);
+        };
+    }
+
     // ── Clone injector ────────────────────────────────────────────────────────
     function injectDialogClone(node) {
         var dialogId = node.getAttribute('data-dialog');
@@ -1191,6 +1290,12 @@ document.addEventListener('DOMContentLoaded', function () {
         // MATH CANVAS NODE — no dialog needed
         if (part === 'math-canvas') {
             injectMathCanvas(node);
+            return;
+        }
+        
+        // LCD STATS NODE
+        if (part === 'lcd-stats') {
+            injectLcdStats(node);
             return;
         }
 
@@ -1332,7 +1437,8 @@ document.addEventListener('DOMContentLoaded', function () {
             'hub-opt':  { x: vw + 20, y: 40 },
             'hub-quit': { x: -Math.round(vw * 0.15), y: Math.round(vh * 0.65) },
             'hub-srv':  { x: Math.round(vw * 0.22), y: vh + 30 },
-            'hub-math': { x: Math.round(vw * 0.5) - 140, y: -220 }  // floats above center
+            'hub-math': { x: Math.round(vw * 0.5) - 140, y: -220 },  // floats above center
+            'hub-lcd':  { x: -Math.round(vw * 0.48), y: Math.round(vh * 0.8) } // floats bottom-left
         };
 
         // Read hub sizes after injection
@@ -1536,6 +1642,74 @@ document.addEventListener('DOMContentLoaded', function () {
                 setTimeout(drawWires, 600);
             }, hubDelay + i * 65);
         });
+
+        // ── One-shot de-overlap pass ──────────────────────────────────────────
+        // Runs once after all nodes have landed. Pushes overlapping nodes apart
+        // (pairwise repulsion) so they don't cover each other during the spread.
+        var settleDelay = hubDelay + childNodes.length * 65 + 700;
+        setTimeout(function () {
+            var allNodes = Array.from(nodesLayer.querySelectorAll('.node'));
+            var PAD = 14; // extra breathing room beyond the actual overlap
+            var ITERS = 40;
+
+            // Read current positions into a working array
+            var boxes = allNodes.map(function (n) {
+                var r = n.getBoundingClientRect();
+                return { el: n, x: r.left, y: r.top, w: r.width, h: r.height };
+            });
+
+            for (var iter = 0; iter < ITERS; iter++) {
+                var moved = false;
+                for (var a = 0; a < boxes.length; a++) {
+                    for (var b = a + 1; b < boxes.length; b++) {
+                        var A = boxes[a], B = boxes[b];
+                        // AABB overlap check
+                        var overlapX = (A.x + A.w + PAD) - B.x;
+                        var overlapY = (A.y + A.h + PAD) - B.y;
+                        if (overlapX <= 0 || overlapY <= 0) continue;
+                        if ((B.x + B.w + PAD) <= A.x) continue;
+                        if ((B.y + B.h + PAD) <= A.y) continue;
+
+                        // Push along the axis of smallest overlap
+                        var push = 0;
+                        if (overlapX < overlapY) {
+                            push = overlapX / 2 + 1;
+                            // Push A left, B right (or reverse if A is already further right)
+                            if (A.x < B.x) { A.x -= push; B.x += push; }
+                            else            { A.x += push; B.x -= push; }
+                        } else {
+                            push = overlapY / 2 + 1;
+                            if (A.y < B.y) { A.y -= push; B.y += push; }
+                            else            { A.y += push; B.y -= push; }
+                        }
+                        moved = true;
+                    }
+                }
+                if (!moved) break;
+            }
+
+            // Apply the final separated positions — snap, no transition
+            boxes.forEach(function (box) {
+                // Convert viewport coords back to the nodesLayer transform space.
+                // nodesLayer is translated by CSS; getBoundingClientRect includes that offset.
+                // We need the difference from the pre-existing position.
+                var oldLeft = parseFloat(box.el.style.left) || 0;
+                var oldTop  = parseFloat(box.el.style.top)  || 0;
+                var oldRect = box.el.getBoundingClientRect();
+                var dx = box.x - oldRect.left;
+                var dy = box.y - oldRect.top;
+
+                if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return; // nothing to do
+
+                box.el.style.transition = 'left 0.4s cubic-bezier(0.16,1,0.3,1), top 0.4s cubic-bezier(0.16,1,0.3,1)';
+                box.el.style.left = (oldLeft + dx) + 'px';
+                box.el.style.top  = (oldTop  + dy) + 'px';
+                nodePositions[box.el.id] = { x: oldLeft + dx, y: oldTop + dy };
+            });
+
+            // Redraw wires after settle
+            setTimeout(drawWires, 450);
+        }, settleDelay);
     }
 
     function hideNodes() {
@@ -1555,7 +1729,8 @@ document.addEventListener('DOMContentLoaded', function () {
         'hub-opt':  '#993333',   // dark red-teal       — Options
         'hub-quit': '#2d7a40',   // dark green-teal     — Quit / Confirm
         'hub-srv':  '#7a6e1a',   // dark yellow-teal    — Servers
-        'hub-math': '#58c4dd'    // Manim cyan-blue      — 3b1b Engine
+        'hub-math': '#58c4dd',   // Manim cyan-blue      — 3b1b Engine
+        'hub-lcd':  '#64b4ff'    // LCD light blue       — Stats
     };
 
     function getNodeAccent(node) {
@@ -1803,4 +1978,4 @@ document.addEventListener('DOMContentLoaded', function () {
             recognition.start();
         }
     });
-}());
+}());

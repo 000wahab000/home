@@ -96,17 +96,17 @@ This document serves as the master tasklist and historical log for the project, 
   - [x] Microphone button (🎙) fixed bottom-right; pulses red while listening; hidden if browser unsupported.
   - [x] Commands: "open options", "open new game", "open servers", "quit", "close", "workings", "see the workings", "zoom in", "zoom out".
   - [x] Toast notification shows recognised transcript (✓ matched, ? unmatched).
-- [ ] **LCD Stats Hub Node**
+- [x] **LCD Stats Hub Node**
   - *Visible only in Workings Mode. A new top-level standalone hub node (same tier as `hub-math`) wired in with its own Bezier wire color.*
-  - [ ] Add `hub-lcd` DOM node to `index.html` following the `hub-math` pattern (`data-part="lcd-stats"`).
-  - [ ] Wire `hub-lcd` into `hubTargets` in `script.js` with a fixed floating position (e.g., bottom-left of viewport).
-  - [ ] Assign a unique wire color for `hub-lcd` in `drawWires()` (do NOT invent — match real LCD blue backlight: `rgba(100,180,255,0.8)`).
-  - [ ] Add `#hub-lcd` CSS block in `styles.css`: LCD aesthetic blended with CS 1.6 UI — dark screen, blue backlight glow, dot-matrix / monospace font, green PCB-style border.
-  - [ ] Implement `injectLcdStats()` in `script.js`: renders stats screen inside the node body. Auto-cycles through stat screens on a timer (like a real LCD rotating display). Click manually advances to next screen. Hover shows tooltip with extra detail.
-  - [ ] **Stat screens (working model — real data wired in later):**
+  - [x] Add `hub-lcd` DOM node to `index.html` following the `hub-math` pattern (`data-part="lcd-stats"`).
+  - [x] Wire `hub-lcd` into `hubTargets` in `script.js` with a fixed floating position (e.g., bottom-left of viewport).
+  - [x] Assign a unique wire color for `hub-lcd` in `drawWires()` (do NOT invent — match real LCD blue backlight: `rgba(100,180,255,0.8)`).
+  - [x] Add `#hub-lcd` CSS block in `styles.css`: LCD aesthetic blended with CS 1.6 UI — dark screen, blue backlight glow, dot-matrix / monospace font, green PCB-style border.
+  - [x] Implement `injectLcdStats()` in `script.js`: renders stats screen inside the node body. Auto-cycles through stat screens on a timer (like a real LCD rotating display). Click manually advances to next screen. Hover shows tooltip with extra detail.
+  - [x] **Stat screens (working model — real data wired in later):**
     - Screen 1 — Visitors: `VISITORS` / `SESSIONS` (placeholder `0` until Cloudflare proxy is set up)
     - Screen 2 — Performance: page load time + Time to First Byte from `performance.getEntriesByType('navigation')[0]`
     - Screen 3 — Memory: `performance.memory.usedJSHeapSize` (Chrome only, graceful fallback)
     - Screen 4 — Uptime / Timestamp: current date + time rendered in real-time
-  - [ ] Stop/clear the LCD timer in `exitWorkingsMode()` (same cleanup pattern as RAF loop for `hub-math`).
+  - [x] Stop/clear the LCD timer in `exitWorkingsMode()` (same cleanup pattern as RAF loop for `hub-math`).
   - [ ] **Cloudflare data (deferred):** Visitor/session counts are `0` placeholders. Real data requires a serverless proxy (Cloudflare Worker or Vercel function) to safely call the Cloudflare Analytics API — build this separately once working model is confirmed.

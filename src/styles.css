@@ -1369,3 +1369,111 @@ body.zoomed-out.is-dragging #app-viewport {
 #hub-math .node-body canvas {
     border-radius: 0 0 2px 2px;
 }
+
+/* ── LCD Stats Node (Hardware TFT display matching image) ──── */
+.lcd-pcb {
+    background: #1952a6; /* Bright blue PCB */
+    padding: 16px 12px 24px 12px;
+    border-radius: 2px;
+    box-shadow: inset 0 0 8px rgba(0,0,0,0.4), 3px 3px 10px rgba(0,0,0,0.5);
+    position: relative;
+    border: 1px solid #113673;
+    display: inline-block;
+}
+
+/* Silver mounting holes in the 4 corners */
+.lcd-pcb::before {
+    content: '';
+    position: absolute;
+    top: 4px; left: 4px; right: 4px; bottom: 4px;
+    background-image: 
+        radial-gradient(circle at 0 0, transparent 4px, #ccc 5px, #fff 6px, transparent 7px),
+        radial-gradient(circle at 100% 0, transparent 4px, #ccc 5px, #fff 6px, transparent 7px),
+        radial-gradient(circle at 0 100%, transparent 4px, #ccc 5px, #fff 6px, transparent 7px),
+        radial-gradient(circle at 100% 100%, transparent 4px, #ccc 5px, #fff 6px, transparent 7px);
+    pointer-events: none;
+}
+
+/* White silkscreen markings on the blue board */
+.lcd-pcb::after {
+    content: '';
+    position: absolute;
+    top: 10px; left: 10px; right: 10px; bottom: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    pointer-events: none;
+}
+
+/* Gold/amber flex ribbon cable at the bottom */
+.lcd-flex {
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 12px;
+    background: repeating-linear-gradient(90deg, #d49a2a, #d49a2a 2px, #f2c94c 2px, #f2c94c 4px);
+    border-radius: 2px;
+    border: 1px solid #b87c1c;
+}
+
+.lcd-bezel {
+    background: #111; /* Black plastic bezel */
+    padding: 3px;
+    border: 2px solid #ccc; /* Silver metallic inner trim */
+    border-top-color: #eee;
+    border-left-color: #eee;
+    border-right-color: #999;
+    border-bottom-color: #999;
+    position: relative;
+    z-index: 10;
+}
+
+.lcd-screen {
+    background-color: #1a1c23; /* Dark TFT screen, not bright blue */
+    border: 1px inset #000;
+    padding: 6px;
+    color: #58c4dd; /* Bright cyan text for contrast */
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    line-height: 1.3;
+    cursor: pointer;
+    user-select: none;
+    height: 44px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+}
+
+.lcd-screen:hover {
+    background-color: #222530;
+}
+
+.lcd-line {
+    white-space: pre;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: left;
+}
+
+.lcd-val {
+    color: #fff;
+}
+
+.lcd-tooltip {
+    position: absolute;
+    bottom: -20px;
+    left: 0;
+    width: 100%;
+    font-size: 9px;
+    color: #fff;
+    text-align: center;
+    font-family: Tahoma, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: rgba(0,0,0,0.7);
+    padding: 2px 0;
+    border-radius: 2px;
+}
