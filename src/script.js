@@ -298,8 +298,8 @@ document.addEventListener('DOMContentLoaded', function () {
     var GRID_CELL_SIZE = 40;
 
     // How zoomed-out the screen starts when entering workings mode.
-    // 0.58 means the portfolio appears at 58% of its normal size.
-    var INITIAL_SCALE = 0.58;
+    // 0.45 gives enough canvas room for all 7 hubs + their children.
+    var INITIAL_SCALE = 0.45;
 
     var isWorkingsMode = false; // are we in pan/zoom mode?
     var currentScale = 1;      // current zoom level (1 = full size)
@@ -1306,7 +1306,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        // CERTIFICATE IMAGE NODES — lazy-loaded image
+        // CERTIFICATE IMAGE NODES — eager-loaded so they render even when initially off-screen
         if (part === 'cert-img') {
             var certFile = node.getAttribute('data-cert');
             var certBody = node.querySelector('.node-body');
@@ -1314,8 +1314,7 @@ document.addEventListener('DOMContentLoaded', function () {
             var certImg = document.createElement('img');
             certImg.src = 'images/' + certFile;
             certImg.alt = node.querySelector('.node-bar').textContent.trim() + ' certificate';
-            certImg.loading = 'lazy';
-            certImg.style.cssText = 'display:block;width:320px;height:auto;border-radius:2px;';
+            certImg.style.cssText = 'display:block;width:320px;height:auto;max-height:240px;object-fit:contain;border-radius:2px;background:#111;';
             certBody.appendChild(certImg);
             node.style.width = '320px';
             return;
@@ -1447,15 +1446,31 @@ document.addEventListener('DOMContentLoaded', function () {
         // Inject clones for all nodes
         nodesLayer.querySelectorAll('.node').forEach(injectDialogClone);
 
-        // Hub target positions
+        // ── Hub layout: orbit the CS:GO viewport ──────────────────────────────
+        // Hubs surround the CS:GO screen. At INITIAL_SCALE=0.45 visible content
+        // range is X:[-0.6·vw…1.6·vw], Y:[-0.6·vh…1.6·vh] — plenty of room.
+        //
+        //              [math]
+        //   [ng]   ╔══════════════╗  [opt]──>[socials + music 4×4]
+        //   [quit] ║  CS:GO menu  ║  [certs]──>[cert 3-col grid]
+        //   [lcd]  ╚══════════════╝
+        //              [srv]──>[12 project cards]
+        //
         var hubTargets = {
-            'hub-ng':    { x: -Math.round(vw * 0.45), y: 40 },
-            'hub-opt':   { x: vw + 20, y: 40 },
-            'hub-quit':  { x: -Math.round(vw * 0.15), y: Math.round(vh * 0.65) },
-            'hub-srv':   { x: Math.round(vw * 0.22), y: vh + 30 },
-            'hub-math':  { x: Math.round(vw * 0.5) - 140, y: -220 },  // floats above center
-            'hub-lcd':   { x: -Math.round(vw * 0.48), y: Math.round(vh * 0.8) }, // floats bottom-left
-            'hub-certs': { x: Math.round(vw * 0.6), y: -Math.round(vh * 0.25) } // top-right
+            // ── LEFT ── spread vertically so children don't overlap each other
+            'hub-ng':    { x: -Math.round(vw * 0.44), y: Math.round(vh * 0.02) },
+            'hub-quit':  { x: -Math.round(vw * 0.38), y: Math.round(vh * 0.52) },
+            'hub-lcd':   { x: -Math.round(vw * 0.38), y: Math.round(vh * 0.92) },
+
+            // ── TOP ── math floats well above center
+            'hub-math':  { x: Math.round(vw * 0.38), y: -Math.round(vh * 0.36) },
+
+            // ── RIGHT ── pushed further right; music grid needs a LOT of horizontal room
+            'hub-opt':   { x: Math.round(vw * 1.10), y: Math.round(vh * 0.04) },
+            'hub-certs': { x: Math.round(vw * 1.10), y: Math.round(vh * 0.62) },
+
+            // ── BOTTOM ── srv pushed further down so 12 project cards have vertical room
+            'hub-srv':   { x: Math.round(vw * 0.18), y: Math.round(vh * 1.12) }
         };
 
         // Read hub sizes after injection
@@ -1464,9 +1479,9 @@ document.addEventListener('DOMContentLoaded', function () {
             hubSizes[hub.id] = { w: hub.offsetWidth || 200, h: hub.offsetHeight || 150 };
         });
 
-        // Compute child positions: dynamic stacking, min 20px between node edges
-        var CHILD_GAP = 20;  // minimum gap between child node edges
-        var CHILD_STUB = 30;  // gap between hub edge and the child column/row
+        // Compute child positions: dynamic stacking, min 30px between node edges
+        var CHILD_GAP = 30;  // minimum gap between child node edges
+        var CHILD_STUB = 50;  // gap between hub edge and the child column/row
 
         var childTargets = {};
 
@@ -1487,10 +1502,17 @@ document.addEventListener('DOMContentLoaded', function () {
             var hcx = ht.x + hs.w / 2;
             var hcy = ht.y + hs.h / 2;
 
-            var dir;
-            if (hcy > vh * 0.85) dir = 'bottom';  // hub-srv: row below
-            else if (hcx < vw / 2) dir = 'left';    // hub-ng, hub-quit: column to the left
-            else dir = 'right';   // hub-opt: column to the right
+            // Explicit child direction per hub (matches orbit layout above)
+            var HUB_DIR = {
+                'hub-ng':    'left',    // children go further left
+                'hub-quit':  'left',    // children go further left
+                'hub-lcd':   'left',    // children go further left
+                'hub-math':  'right',   // no children, direction irrelevant
+                'hub-srv':   'bottom',  // 12 projects fan out below
+                'hub-opt':   'right',   // socials + music grid go further right
+                'hub-certs': 'right'    // cert images go further right
+            };
+            var dir = HUB_DIR[hid] || 'right';
 
             // Cursor tracks where the next child starts
             var cursorX = 0, cursorY = 0;
@@ -1508,15 +1530,38 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
 
             } else if (dir === 'right') {
-                cursorY = ht.y;                           // align column top with hub top
-                kids.forEach(function (child) {
-                    var ch = child.offsetHeight || 80;
-                    childTargets[child.id] = {
-                        x: ht.x + hs.w + CHILD_STUB,     // place column to the RIGHT of hub
-                        y: cursorY
-                    };
-                    cursorY += ch + CHILD_GAP;
-                });
+                // ── 3-column grid: certificate images ───────────────────────────
+                if (hid === 'hub-certs') {
+                    var CERT_COLS    = 2;    // 2×4 grid
+                    var CERT_GAP_X   = 50;
+                    var CERT_GAP_Y   = 30;
+                    var CERT_W       = 320;
+                    // Fixed height: image is capped at max-height:240px + 24px bar + ~10px padding
+                    // offsetHeight is unreliable here (image not yet loaded), so hardcode it.
+                    var CERT_CARD_H  = 274;
+                    var certRows     = Math.ceil(kids.length / CERT_COLS);
+                    var certTotalH   = certRows * (CERT_CARD_H + CERT_GAP_Y);
+                    var CERT_START_X = ht.x + hs.w + CHILD_STUB;
+                    var CERT_START_Y = ht.y - 3 * (certTotalH + CHILD_STUB);
+                    kids.forEach(function (child, i) {
+                        var col = i % CERT_COLS;
+                        var row = Math.floor(i / CERT_COLS);
+                        childTargets[child.id] = {
+                            x: CERT_START_X + col * (CERT_W + CERT_GAP_X),
+                            y: CERT_START_Y + row * (CERT_CARD_H + CERT_GAP_Y)
+                        };
+                    });
+                } else {
+                    cursorY = ht.y;                           // align column top with hub top
+                    kids.forEach(function (child) {
+                        var ch = child.offsetHeight || 80;
+                        childTargets[child.id] = {
+                            x: ht.x + hs.w + CHILD_STUB,     // place column to the RIGHT of hub
+                            y: cursorY
+                        };
+                        cursorY += ch + CHILD_GAP;
+                    });
+                }
 
             } else {
                 // 'bottom' (hub-srv): center children horizontally under the hub
