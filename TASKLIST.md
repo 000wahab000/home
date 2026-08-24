@@ -158,3 +158,17 @@ This document serves as the master tasklist and historical log for the project, 
     - "Expand All" — opens all subsections across all hubs.
     - "Collapse All" — closes all subsections, returns to top-level-only view.
   - [ ] Individual hub headers retain their own toggle independent of the global control.
+
+---
+
+## .session — 2026-08-25 02:27 IST
+- **Date & Time:** 2026-08-25 02:27 IST
+- **Action:** Refactoring codebase to execute `/ponytail-audit` optimizations (-427 lines).
+  - Removing static HTML node graph shells in `src/index.html`.
+  - Removing dead certificate placeholder nodes (`cert-extra1`, `cert-extra2`) in `src/index.html`.
+  - Removing the 63-line AABB box de-overlap repulsion physics loop in `src/script.js`.
+  - Simplifying verbose DOM `createElement`/`appendChild` chains into `innerHTML` template strings in `src/script.js`.
+  - Removing redundant `.close` and cancel click listeners across dialog initializers in `src/script.js`.
+  - Replacing hand-rolled `HH:MM:SS` string padding in `updateScreen()` with `toLocaleTimeString('en-GB')`.
+- **Rationale:** Eliminate over-engineering bloat, enforce a single source of truth for node definitions, remove unnecessary runtime physics loops during viewport pan/zoom, and utilize native HTML5 dialog form-submit behaviors.
+

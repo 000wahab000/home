@@ -35,17 +35,7 @@ function initOptionsDialog() {
     if (filterSel)  filterSel.addEventListener('change', updatePreview);
     updatePreview(); // set initial state
 
-    dialog.querySelector('#options-ok').addEventListener('click', function () {
-        dialog.close();
-    });
-
-    dialog.querySelector('#options-cancel').addEventListener('click', function () {
-        dialog.close();
-    });
-
-    dialog.querySelector('.close').addEventListener('click', function () {
-        dialog.close();
-    });
+    // Dialog closing is natively handled by <form method="dialog"> and global .close handler
 
     return dialog;
 }
@@ -62,13 +52,7 @@ function initNewGameDialog() {
         goSound.play();
     });
 
-    dialog.querySelector('#new-game-cancel').addEventListener('click', function () {
-        dialog.close();
-    });
-
-    dialog.querySelector('.close').addEventListener('click', function () {
-        dialog.close();
-    });
+    // Dialog closing is natively handled by <form method="dialog"> and global .close handler
 
     return dialog;
 }
@@ -148,9 +132,7 @@ function initServersDialog() {
         });
     });
 
-    dialog.querySelector('.close').addEventListener('click', function () {
-        dialog.close();
-    });
+    // Dialog closing is natively handled by <form method="dialog"> and global .close handler
 
     return dialog;
 }
@@ -1103,29 +1085,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
         var card = document.createElement('div');
         card.className = 'spotify-card';
-
-        // Envelope top
-        var envTop = document.createElement('div');
-        envTop.className = 'spotify-env-top';
-        card.appendChild(envTop);
-
-        // Half-visible disc
-        var discWrap = document.createElement('div');
-        discWrap.className = 'spotify-disc-wrap';
-        var disc = document.createElement('div');
-        disc.className = 'spotify-disc';
-        discWrap.appendChild(disc);
-        card.appendChild(discWrap);
-
-        var nameEl = document.createElement('div');
-        nameEl.className = 'spotify-name';
-        nameEl.textContent = data.name;
-        card.appendChild(nameEl);
-
-        var artistEl = document.createElement('div');
-        artistEl.className = 'spotify-artist';
-        artistEl.textContent = data.artist;
-        card.appendChild(artistEl);
+        card.innerHTML =
+            '<div class="spotify-env-top"></div>' +
+            '<div class="spotify-disc-wrap"><div class="spotify-disc"></div></div>' +
+            '<div class="spotify-name">' + data.name + '</div>' +
+            '<div class="spotify-artist">' + data.artist + '</div>';
 
         var activePopup = null;
 
@@ -1231,10 +1195,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 stats[2].value = 'N/A';
             }
             
-            var d = new Date();
-            stats[3].value = d.getHours().toString().padStart(2, '0') + ':' + 
-                             d.getMinutes().toString().padStart(2, '0') + ':' + 
-                             d.getSeconds().toString().padStart(2, '0');
+            stats[3].value = new Date().toLocaleTimeString('en-GB');
                              
             var s = stats[currentIndex];
             screen.innerHTML = '<div class="lcd-line">' + s.label + '</div><div class="lcd-line lcd-val">' + s.value + '</div>';
@@ -1465,9 +1426,9 @@ document.addEventListener('DOMContentLoaded', function () {
             // ── TOP ── math floats well above center
             'hub-math':  { x: Math.round(vw * 0.38), y: -Math.round(vh * 0.36) },
 
-            // ── RIGHT ── pushed further right; music grid needs a LOT of horizontal room
-            'hub-opt':   { x: Math.round(vw * 1.10), y: Math.round(vh * 0.04) },
-            'hub-certs': { x: Math.round(vw * 1.10), y: Math.round(vh * 0.62) },
+            // ── RIGHT ── Certificates at top-right, Options below
+            'hub-certs': { x: Math.round(vw * 1.10), y: -Math.round(vh * 0.35) },
+            'hub-opt':   { x: Math.round(vw * 1.10), y: Math.round(vh * 0.30) },
 
             // ── BOTTOM ── srv pushed further down so 12 project cards have vertical room
             'hub-srv':   { x: Math.round(vw * 0.18), y: Math.round(vh * 1.12) }
@@ -1542,7 +1503,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     var certRows     = Math.ceil(kids.length / CERT_COLS);
                     var certTotalH   = certRows * (CERT_CARD_H + CERT_GAP_Y);
                     var CERT_START_X = ht.x + hs.w + CHILD_STUB;
-                    var CERT_START_Y = ht.y - 3 * (certTotalH + CHILD_STUB);
+                    var CERT_START_Y = ht.y;
                     kids.forEach(function (child, i) {
                         var col = i % CERT_COLS;
                         var row = Math.floor(i / CERT_COLS);
@@ -1705,73 +1666,8 @@ document.addEventListener('DOMContentLoaded', function () {
             }, hubDelay + i * 65);
         });
 
-        // ── One-shot de-overlap pass ──────────────────────────────────────────
-        // Runs once after all nodes have landed. Pushes overlapping nodes apart
-        // (pairwise repulsion) so they don't cover each other during the spread.
-        var settleDelay = hubDelay + childNodes.length * 65 + 700;
-        setTimeout(function () {
-            var allNodes = Array.from(nodesLayer.querySelectorAll('.node'));
-            var PAD = 14; // extra breathing room beyond the actual overlap
-            var ITERS = 40;
-
-            // Read current positions into a working array
-            var boxes = allNodes.map(function (n) {
-                var r = n.getBoundingClientRect();
-                return { el: n, x: r.left, y: r.top, w: r.width, h: r.height };
-            });
-
-            for (var iter = 0; iter < ITERS; iter++) {
-                var moved = false;
-                for (var a = 0; a < boxes.length; a++) {
-                    for (var b = a + 1; b < boxes.length; b++) {
-                        var A = boxes[a], B = boxes[b];
-                        // AABB overlap check
-                        var overlapX = (A.x + A.w + PAD) - B.x;
-                        var overlapY = (A.y + A.h + PAD) - B.y;
-                        if (overlapX <= 0 || overlapY <= 0) continue;
-                        if ((B.x + B.w + PAD) <= A.x) continue;
-                        if ((B.y + B.h + PAD) <= A.y) continue;
-
-                        // Push along the axis of smallest overlap
-                        var push = 0;
-                        if (overlapX < overlapY) {
-                            push = overlapX / 2 + 1;
-                            // Push A left, B right (or reverse if A is already further right)
-                            if (A.x < B.x) { A.x -= push; B.x += push; }
-                            else            { A.x += push; B.x -= push; }
-                        } else {
-                            push = overlapY / 2 + 1;
-                            if (A.y < B.y) { A.y -= push; B.y += push; }
-                            else            { A.y += push; B.y -= push; }
-                        }
-                        moved = true;
-                    }
-                }
-                if (!moved) break;
-            }
-
-            // Apply the final separated positions — snap, no transition
-            boxes.forEach(function (box) {
-                // Convert viewport coords back to the nodesLayer transform space.
-                // nodesLayer is translated by CSS; getBoundingClientRect includes that offset.
-                // We need the difference from the pre-existing position.
-                var oldLeft = parseFloat(box.el.style.left) || 0;
-                var oldTop  = parseFloat(box.el.style.top)  || 0;
-                var oldRect = box.el.getBoundingClientRect();
-                var dx = box.x - oldRect.left;
-                var dy = box.y - oldRect.top;
-
-                if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return; // nothing to do
-
-                box.el.style.transition = 'left 0.4s cubic-bezier(0.16,1,0.3,1), top 0.4s cubic-bezier(0.16,1,0.3,1)';
-                box.el.style.left = (oldLeft + dx) + 'px';
-                box.el.style.top  = (oldTop  + dy) + 'px';
-                nodePositions[box.el.id] = { x: oldLeft + dx, y: oldTop + dy };
-            });
-
-            // Redraw wires after settle
-            setTimeout(drawWires, 450);
-        }, settleDelay);
+        // Redraw wires after animation completes
+        setTimeout(drawWires, hubDelay + childNodes.length * 65 + 600);
     }
 
     function hideNodes() {
